@@ -1,6 +1,6 @@
 SAI
 ===
-Broadcom SAI spec implementation software version 1.0
+Broadcom SAI spec implementation software version 2.0
 
 Overview
 ========
@@ -16,7 +16,7 @@ Broadcom's SAI implementation runs on top of the Opennsl library
 available at: https://github.com/Broadcom-Switch/OpenNSL.
 One can download the supported Opennsl library from:
 https://github.com/Broadcom-Switch/OpenNSL/tree/master/bin
-This SAI release supports the Broadcom TD2 switching ASIC.
+This SAI release supports the Broadcom TD2 and Tomahawk switching ASIC.
 
 Legal
 =====
@@ -27,14 +27,7 @@ License
 Licenses for the software are available at the applicable level of the
 software repository under the "LICENSE" file.
 
-Building
-========
-This package depends upon OpenNSL 3.0.0.4 or later.
-
-To build SAI, change to the bin/s6000-x86-trident-deb80 directory.  Use the make
-command to build the SAI shared library.
-
-Note: Set the OPENNSL_BASE MAKE variable to point to the OpenNSL base directory.
-The OpenNSL include files and the library are picked from the relative paths
-and pointed to internally by OPENNSL_INC and LIB_OPENNSL_PATH variables.
+Dependencies
+============
+This package depends upon OpenNSL 3.2.1.5 or later.
 
