@@ -32,16 +32,24 @@
 
 /** Lag attribute: List of attributes for LAG object */
 typedef enum _sai_lag_attr_t {
+    
+    SAI_LAG_ATTR_START,
 
     /** READ-ONLY */
 
     /** SAI port list [sai_object_list_t] */
-    SAI_LAG_ATTR_PORT_LIST,
+    SAI_LAG_ATTR_PORT_LIST = SAI_LAG_ATTR_START,
 
     /** READ_WRITE */
 
+    SAI_LAG_ATTR_END,
+
     /** Custom range base value */
-    SAI_LAG_ATTR_CUSTOM_RANGE_BASE  = 0x10000000
+    SAI_LAG_ATTR_CUSTOM_RANGE_BASE = 0x10000000,
+
+    /* --*/
+    SAI_LAG_ATTR_CUSTOM_RANGE_END
+
 
 } sai_lag_attr_t;
 
@@ -56,7 +64,7 @@ typedef enum _sai_lag_attr_t {
 typedef sai_status_t(*sai_create_lag_fn)(
     _Out_ sai_object_id_t* lag_id,
     _In_ uint32_t attr_count,
-    _In_ sai_attribute_t *attr_list
+    _In_ const sai_attribute_t *attr_list
     );
 
 /*
@@ -102,10 +110,12 @@ typedef sai_status_t (*sai_get_lag_attribute_fn)(
  */
 typedef enum _sai_lag_member_attr_t {
 
+
+    SAI_LAG_MEMBER_ATTR_START,
     /** READ_WRITE */
 
     /* LAG ID [sai_object_id_t] (MANDATORY_ON_CREATE|CREATE_ONLY) */
-    SAI_LAG_MEMBER_ATTR_LAG_ID,
+    SAI_LAG_MEMBER_ATTR_LAG_ID = SAI_LAG_MEMBER_ATTR_START,
 
     /* logical port ID [sai_object_id_t] (MANDATORY_ON_CREATE|CREATE_ONLY) */
     SAI_LAG_MEMBER_ATTR_PORT_ID,
@@ -115,9 +125,15 @@ typedef enum _sai_lag_member_attr_t {
 
      /* Disable traffic collection from this port as part of LAG. [bool] (CREATE_AND_SET) default to FALSE. */
     SAI_LAG_MEMBER_ATTR_INGRESS_DISABLE,
+    
+    SAI_LAG_MEMBER_ATTR_END,
 
     /** Custom range base value */
-    SAI_LAG_MEMBER_ATTR_CUSTOM_RANGE_BASE  = 0x10000000
+    SAI_LAG_MEMBER_ATTR_CUSTOM_RANGE_BASE = 0x10000000,
+
+    /* --*/
+    SAI_LAG_MEMBER_ATTR_CUSTOM_RANGE_END
+
 
 } sai_lag_member_attr_t;
 
@@ -132,7 +148,7 @@ typedef enum _sai_lag_member_attr_t {
 typedef sai_status_t(*sai_create_lag_member_fn)(
     _Out_ sai_object_id_t* lag_member_id,
     _In_ uint32_t attr_count,
-    _In_ sai_attribute_t *attr_list
+    _In_ const sai_attribute_t *attr_list
     );
 
 /*

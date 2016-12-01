@@ -40,8 +40,8 @@
  *  \{
  */
 
-#define SAI_MAX_HARDWARE_ID_LEN         255
-#define SAI_MAX_FIRMWARE_PATH_NAME_LEN  PATH_MAX
+#define SAI_MAX_HARDWARE_ID_LEN                 255
+#define SAI_MAX_FIRMWARE_PATH_NAME_LEN          PATH_MAX
 
 /**
  *  @brief Attribute data for SAI_SWITCH_ATTR_OPER_STATUS
@@ -110,33 +110,25 @@ typedef enum _sai_packet_action_t
 } sai_packet_action_t;
 
 /**
- * Attribute data for SAI_SWITCH_ ATTR_LAG_HASH_FIELDS
- * and SAI_SWITCH_ ATTR_ECMP_HASH_FIELDS
+ *  @brief Attribute data for number of vlan tags present in a packet
  */
-typedef enum _sai_switch_hash_field_types_t
+typedef enum _sai_packet_vlan_t
 {
-    SAI_HASH_SRC_IP = 0,
-    SAI_HASH_DST_IP = 1,
-    SAI_HASH_VLAN_ID = 2,
-    SAI_HASH_IP_PROTOCOL = 3,
-    SAI_HASH_ETHERTYPE = 4,
-    SAI_HASH_L4_SOURCE_PORT = 5,
-    SAI_HASH_L4_DEST_PORT = 6,
-    SAI_HASH_SOURCE_MAC = 7,
-    SAI_HASH_DEST_MAC = 8,
-    SAI_HASH_IN_PORT = 9,
-} sai_switch_hash_field_types_t;
+    /** Untagged
+     *  Packet without vlan tags */
+    SAI_PACKET_VLAN_UNTAG,
 
-/**
- * Attribute data for SAI_SWITCH_ATTR_LAG_HASH_ALGO
- * and SAI_SWITCH_ATTR_ECMP_HASH_ALGO
- */
-typedef enum _sai_switch_hash_algo_t
-{
-    SAI_HASH_XOR = 1,
-    SAI_HASH_CRC = 2,
-    SAI_HASH_RANDOM = 3,
-} sai_switch_hash_algo_t;
+    /** Single Outer Tag
+     *  Packet outer TPID matches to the ingress port outer TPID and
+     *  Packet inner TPID if present, does not matches the configured inner TPID */
+    SAI_PACKET_VLAN_SINGLE_OUTER_TAG,
+
+    /** Double Tag
+     *  Packet outer TPID matches to the ingress port outer TPID and
+     *  Packet inner TPID matches to the configured inner TPID */
+    SAI_PACKET_VLAN_DOUBLE_TAG
+
+} sai_packet_vlan_t;
 
 /**
 * @brief Attribute data for SAI_SWITCH_SWITCHING_MODE
@@ -152,30 +144,97 @@ typedef enum _sai_switch_switching_mode_t
 } sai_switch_switching_mode_t;
 
 /**
+* @brief Attribute data for SAI_SWITCH_ATTR_ECMP_DEFAULT_HASH_ALGORITHM
+* and SAI_SWITCH_ATTR_LAG_DEFAULT_HASH_ALGORITHM
+*/
+typedef enum _sai_hash_algorithm_t
+{
+    /** CRC-based hash algorithm */
+    SAI_HASH_ALGORITHM_CRC = 1,
+
+    /** XOR-based hash algorithm */
+    SAI_HASH_ALGORITHM_XOR = 2,
+
+    /** Random-based hash algorithm */
+    SAI_HASH_ALGORITHM_RANDOM = 3,
+
+} sai_hash_algorithm_t;
+
+/**
+ * @brief Attribute data for SAI_SWITCH_ATTR_RESTART_TYPE
+ */
+typedef enum _sai_switch_restart_type_t
+{
+    /** NPU doesn't support warmboot */
+    SAI_RESTART_TYPE_NONE = 0,
+
+    /** Planned restart only */
+    SAI_RESTART_TYPE_PLANNED = 1,
+
+    /** Both planned and unplanned restart */
+    SAI_RESTART_TYPE_ANY = 2,
+
+
+} sai_switch_restart_type_t;
+
+/**
 *  Attribute Id in sai_set_switch_attribute() and
 *  sai_get_switch_attribute() calls
 */
 typedef enum _sai_switch_attr_t
 {
+    
+    SAI_SWITCH_ATTR_START,    
+
     /** READ-ONLY */
 
-    /** The number of ports on the switch [uint32_t] */
-    SAI_SWITCH_ATTR_PORT_NUMBER,
+    /** The number of ports on the switch [sai_uint32_t] */
+    SAI_SWITCH_ATTR_PORT_NUMBER = SAI_SWITCH_ATTR_START,
 
     /** Get the port list [sai_object_list_t] */
     SAI_SWITCH_ATTR_PORT_LIST,
 
-    /** Get the Max MTU in bytes, Supported by the switch [uint32_t] */
+    /** Get the Max MTU in bytes, Supported by the switch [sai_uint32_t] */
     SAI_SWITCH_ATTR_PORT_MAX_MTU,
 
     /** Get the CPU Port [sai_object_id_t] */
     SAI_SWITCH_ATTR_CPU_PORT,
 
-    /** Max number of virtual routers supported [uint32_t] */
+    /** Max number of virtual routers supported [sai_uint32_t] */
     SAI_SWITCH_ATTR_MAX_VIRTUAL_ROUTERS,
 
-    /** The size of the FDB Table in bytes [uint32_t] */
+    /** The size of the FDB Table in bytes [sai_uint32_t] */
     SAI_SWITCH_ATTR_FDB_TABLE_SIZE,
+
+    /** The L3 Host Table size [sai_uint32_t] */
+    SAI_SWITCH_ATTR_L3_NEIGHBOR_TABLE_SIZE,
+
+    /** The L3 Route Table size [sai_uint32_t] */
+    SAI_SWITCH_ATTR_L3_ROUTE_TABLE_SIZE,
+
+    /** Number of ports that can be part of a LAG [sai_uint32_t] */
+    SAI_SWITCH_ATTR_LAG_MEMBERS,
+
+    /** Number of LAGs that can be created [sai_uint32_t] */
+    SAI_SWITCH_ATTR_NUMBER_OF_LAGS,
+
+    /** ECMP number of members per group [sai_uint32_t] (default is 64) */
+    SAI_SWITCH_ATTR_ECMP_MEMBERS,
+
+    /** ECMP number of group [sai_uint32_t] */
+    SAI_SWITCH_ATTR_NUMBER_OF_ECMP_GROUPS,
+
+    /** The number of Unicast Queues per port [sai_uint32_t] */
+    SAI_SWITCH_ATTR_NUMBER_OF_UNICAST_QUEUES,
+
+    /** The number of Multicast Queues per port [sai_uint32_t] */
+    SAI_SWITCH_ATTR_NUMBER_OF_MULTICAST_QUEUES,
+
+    /** The total number of Queues per port [sai_uint32_t] */
+    SAI_SWITCH_ATTR_NUMBER_OF_QUEUES,
+
+    /** The number of CPU Queues [sai_uint32_t] */
+    SAI_SWITCH_ATTR_NUMBER_OF_CPU_QUEUES,
 
     /**
     *   Local subnet routing supported [bool]
@@ -220,10 +279,17 @@ typedef enum _sai_switch_attr_t
     /** ACL user-based ACL meta data range [sai_u32_range_t] */
     SAI_SWITCH_ATTR_ACL_USER_META_DATA_RANGE,
 
+    /** ACL user-based trap id range [sai_u32_range_t] */
+    SAI_SWITCH_ATTR_ACL_USER_TRAP_ID_RANGE,
+
     /** Default SAI STP instance ID [sai_object_id_t] */
     SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID,
 
-    /** Maximum traffic classes limit*/
+    /* Default SAI Virtual Router ID [sai_object_id_t]
+     * Must return SAI_STATUS_OBJECT_IN_USE when try to delete this VR ID. */
+    SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID,
+
+    /** Maximum traffic classes limit [sai_uint8_t] */
     SAI_SWITCH_ATTR_QOS_MAX_NUMBER_OF_TRAFFIC_CLASSES,
 
     /** HQOS - Maximum Number of Hierarchy scheduler
@@ -234,11 +300,8 @@ typedef enum _sai_switch_attr_t
      * each Hierarchy level [sai_u32_list_t] */
     SAI_SWITCH_ATTR_QOS_MAX_NUMBER_OF_SCHEDULER_GROUPS_PER_HIERARCHY_LEVEL,
 
-    /** Maximum number of ports that can be part of a LAG [uint32_t] */
-    SAI_SWITCH_ATTR_MAX_LAG_MEMBERS,
-
-    /** Maximum number of LAGs that can be created per switch [uint32_t] */
-    SAI_SWITCH_ATTR_MAX_LAG_NUMBER,
+    /** HQOS - Maximum number of childs supported per scheudler group [sai_uint32_t]*/
+    SAI_SWITCH_ATTR_QOS_MAX_NUMBER_OF_CHILDS_PER_SCHEDULER_GROUP,
 
     /** switch total buffer size in KB [sai_uint32_t] */
     SAI_SWITCH_ATTR_TOTAL_BUFFER_SIZE,
@@ -248,6 +311,53 @@ typedef enum _sai_switch_attr_t
 
     /** switch number of egress buffer pool [sai_uint32_t] */
     SAI_SWITCH_ATTR_EGRESS_BUFFER_POOL_NUM,
+
+    /** Default trap group [sai_object_id_t]
+    * (default value after switch initialization
+    *    SAI_HOSTIF_TRAP_GROUP_ATTR_ADMIN_STATE = true
+    *    SAI_HOSTIF_TRAP_GROUP_ATTR_PRIO = SAI_SWITCH_ATTR_ACL_TABLE_MINIMUM_PRIORITY,
+    *    SAI_HOSTIF_TRAP_GROUP_ATTR_QUEUE = 0,
+    *    SAI_HOSTIF_TRAP_GROUP_ATTR_POLICER = SAI_NULL_OBJECT_ID)
+    * The group handle is read only, while the group attributes, such as queue and policer,
+    * may be modified */
+    SAI_SWITCH_ATTR_DEFAULT_TRAP_GROUP,
+
+    /** The hash object for packets going through ECMP [sai_object_id_t]
+     * (default value after switch initialization
+     *   SAI_HASH_NATIVE_FIELD_LIST = [SAI_NATIVE_HASH_FIELD_SRC_MAC,
+     *   SAI_NATIVE_HASH_FIELD_DST_MAC, SAI_NATIVE_HASH_FIELD_IN_PORT,
+     *   SAI_NATIVE_HASH_FIELD_ETHERTYPE]
+     *   SAI_HASH_UDF_GROUP_LIST empty list)
+     * The object id is read only, while the object attributes can be modified */
+    SAI_SWITCH_ATTR_ECMP_HASH,
+
+    /** The hash object for packets going through LAG [sai_object_id_t]
+     * (default value after switch initialization
+     *   SAI_HASH_NATIVE_FIELD_LIST = [SAI_NATIVE_HASH_FIELD_SRC_MAC,
+     *   SAI_NATIVE_HASH_FIELD_DST_MAC, SAI_NATIVE_HASH_FIELD_IN_PORT,
+     *   SAI_NATIVE_HASH_FIELD_ETHERTYPE]
+     *   SAI_HASH_UDF_GROUP_LIST empty list)
+     * The object id is read only, while the object attributes can be modified */
+    SAI_SWITCH_ATTR_LAG_HASH,
+
+    /** Type of restart supported [sai_switch_restart_type_t] */
+    SAI_SWITCH_ATTR_RESTART_TYPE,
+
+    /** Minimum interval of time required by SAI for planned restart [sai_uint32_t]
+     *  in milliseconds. Will be 0 for SAI_RESTART_TYPE_NONE.
+     *  The Host Adapter will have to wait for this minimum interval of time before it decides
+     *  to bring down SAI due to init failure. */
+    SAI_SWITCH_ATTR_MIN_PLANNED_RESTART_INTERVAL,
+
+    /** Nonvolatile storage required by both SAI and NPU in KB [sai_uint64_t]
+     * Will be 0 for SAI_RESTART_TYPE_NONE */
+    SAI_SWITCH_ATTR_NV_STORAGE_SIZE,
+   
+    /** Count of the total number of actions supported by NPU. [sai_uint32_t] */
+    SAI_SWITCH_ATTR_MAX_ACL_ACTION_COUNT,
+
+    /** Acl capabilities supported by the NPU. [sai_acl_capability_t] */
+    SAI_SWITCH_ATTR_ACL_CAPABILITY,
 
     /** READ-WRITE */
 
@@ -264,11 +374,11 @@ typedef enum _sai_switch_attr_t
     /** Default switch MAC Address [sai_mac_t] */
     SAI_SWITCH_ATTR_SRC_MAC_ADDRESS,
 
-    /** Maximum number of learned MAC addresses [uint32_t]
+    /** Maximum number of learned MAC addresses [sai_uint32_t]
      * zero means learning limit disable. (default to zero) */
     SAI_SWITCH_ATTR_MAX_LEARNED_ADDRESSES,
 
-    /** Dynamic FDB entry aging time in seconds [uint32_t]
+    /** Dynamic FDB entry aging time in seconds [sai_uint32_t]
     *   Zero means aging is disabled.
     *  (default to zero)
     */
@@ -283,35 +393,49 @@ typedef enum _sai_switch_attr_t
 
     SAI_SWITCH_ATTR_FDB_MULTICAST_MISS_ACTION,
 
-    /** Hash algorithm for all LAG in the switch[sai_switch_hash_algo_t]
-     * (default to SAI_HASH_CRC)
-     */
-    SAI_SWITCH_ATTR_LAG_HASH_ALGO,
+    /** SAI ECMP default hash algorithm [sai_hash_algorithm] (default to SAI_HASH_ALGORITHM_CRC) */
+    SAI_SWITCH_ATTR_ECMP_DEFAULT_HASH_ALGORITHM,
 
-    /** Hash seed for all LAG in the switch[sai_switch_hash_seed_t]*/
-    SAI_SWITCH_ATTR_LAG_HASH_SEED,
+    /** SAI ECMP default hash seed [sai_uint32_t] (default to 0) */
+    SAI_SWITCH_ATTR_ECMP_DEFAULT_HASH_SEED,
 
-    /** Hash fields for all LAG in the switch[sai_s32_list_t]
-     * (default all fields in sai_switch_hash_field_types_t are enabled)
-     */
-    SAI_SWITCH_ATTR_LAG_HASH_FIELDS,
+    /** SAI ECMP default symmetric hash [bool] (default to false)
+    *   When set, the hash calculation will result in the same value as when the source and
+    *   destination addresses (L2 src/dst mac,L3 src/dst ip,L4 src/dst port) were swapped,
+    *   ensuring the same conversation will result in the same hash value.
+    */
+    SAI_SWITCH_ATTR_ECMP_DEFAULT_SYMMETRIC_HASH,
 
-    /** Hash algorithm for all ECMP in the switch[sai_switch_hash_algo_t]
-     * (default to SAI_HASH_CRC)
-     */
-    SAI_SWITCH_ATTR_ECMP_HASH_ALGO,
+    /** The hash object for IPv4 packets going through ECMP [sai_object_id_t] */
+    SAI_SWITCH_ATTR_ECMP_HASH_IPV4,
 
-    /** Hash seed for all ECMP in the switch[sai_switch_hash_seed_t]*/
-    SAI_SWITCH_ATTR_ECMP_HASH_SEED,
+    /** The hash object for IPv4 in IPv4 packets going through ECMP [sai_object_id_t] */
+    SAI_SWITCH_ATTR_ECMP_HASH_IPV4_IN_IPV4,
 
-    /** Hash fields for all ECMP in the switch[sai_s32_list_t]
-     * (default all fields in sai_switch_hash_field_types_t are enabled)
-     */
-    SAI_SWITCH_ATTR_ECMP_HASH_FIELDS,
+    /** The hash object for IPv6 packets going through ECMP [sai_object_id_t] */
+    SAI_SWITCH_ATTR_ECMP_HASH_IPV6,
 
-    /** ECMP max number of paths per group [uint32_t]
-       (default to 64) */
-    SAI_SWITCH_ATTR_ECMP_MAX_PATHS,
+    /** SAI LAG default hash algorithm [sai_hash_algorithm] (default to SAI_HASH_ALGORITHM_CRC) */
+    SAI_SWITCH_ATTR_LAG_DEFAULT_HASH_ALGORITHM,
+
+    /** SAI LAG default hash seed [sai_uint32_t] (default to 0) */
+    SAI_SWITCH_ATTR_LAG_DEFAULT_HASH_SEED,
+
+    /** SAI LAG default symmetric hash [bool] (default to false)
+    *   When set, the hash calculation will result in the same value as when the source and
+    *   destination addresses (L2 src/dst mac,L3 src/dst ip,L4 src/dst port) were swapped,
+    *   ensuring the same conversation will result in the same hash value.
+    */
+    SAI_SWITCH_ATTR_LAG_DEFAULT_SYMMETRIC_HASH,
+
+    /** The hash object for IPv4 packets going through LAG [sai_object_id_t] */
+    SAI_SWITCH_ATTR_LAG_HASH_IPV4,
+
+    /** The hash object for IPv4 in IPv4 packets going through LAG [sai_object_id_t] */
+    SAI_SWITCH_ATTR_LAG_HASH_IPV4_IN_IPV4,
+
+    /** The hash object for IPv6 packets going through LAG [sai_object_id_t] */
+    SAI_SWITCH_ATTR_LAG_HASH_IPV6,
 
     /** The SDK can
      * 1 - Read the counters directly from HW (or)
@@ -329,29 +453,11 @@ typedef enum _sai_switch_attr_t
      *
      * Default - 1 sec (SW counter cache)
      *
-     * [uint32_t]
+     * [sai_uint32_t]
      */
     SAI_SWITCH_ATTR_COUNTER_REFRESH_INTERVAL,
 
-    /** Default trap channel [sai_hostif_trap_channel_t]
-     * (default to SAI_HOSTIF_TRAP_CHANNEL_CB) */
-    SAI_SWITCH_ATTR_DEFAULT_TRAP_CHANNEL,
-
-    /** Default file descriptor for SAI_HOSTIF_TRAP_CHANNEL_FD [sai_object_id_t]
-     * Must be set before set SAI_SWITCH_ATTR_DEFAULT_TRAP_CHANNEL to SAI_HOSTIF_TRAP_CHANNEL_FD
-     * (default to SAI_NULL_OBJECT_ID) */
-    SAI_SWITCH_ATTR_DEFAULT_TRAP_CHANNEL_FD,
-
-    /** Default trap group [sai_object_id_t]
-     * (default value after switch initialization
-     *    SAI_HOSTIF_TRAP_GROUP_ATTR_ADMIN_STATE = true
-     *    SAI_HOSTIF_TRAP_GROUP_ATTR_PRIO = SAI_SWITCH_ATTR_ACL_TABLE_MINIMUM_PRIORITY,
-     *    SAI_HOSTIF_TRAP_GROUP_ATTR_QUEUE = 0,
-     *    SAI_HOSTIF_TRAP_GROUP_ATTR_POLICER = SAI_NULL_OBJECT_ID)
-     */
-    SAI_SWITCH_ATTR_DEFAULT_TRAP_GROUP,
-
-    /** Default Traffic class value, Defalut TC = 0 */
+    /** Default Traffic class value, Default TC = 0 */
     SAI_SWITCH_ATTR_QOS_DEFAULT_TC,
 
     /** Enable DOT1P -> TC MAP [sai_object_id_t] on switch.
@@ -366,12 +472,6 @@ typedef enum _sai_switch_attr_t
      * Default disabled */
     SAI_SWITCH_ATTR_QOS_DOT1P_TO_COLOR_MAP,
 
-    /** Enable DOT1P -> TC AND COLOR MAP [sai_object_id_t] on switch.
-     * MAP id = SAI_NULL_OBJECT_ID to disable map on switch.
-     * To enable/disable trust Dot1p, Map ID should be add/remove on switch.
-     * Default disabled */
-    SAI_SWITCH_ATTR_QOS_DOT1P_TO_TC_AND_COLOR_MAP,
-
     /** Enable DSCP -> TC MAP [sai_object_id_t] on switch.
      * MAP id = SAI_NULL_OBJECT_ID to disable map on switch.
      * To enable/disable trust DSCP, Map ID should be add/remove on port.
@@ -384,37 +484,24 @@ typedef enum _sai_switch_attr_t
      * Default no map */
     SAI_SWITCH_ATTR_QOS_DSCP_TO_COLOR_MAP,
 
-    /** Enable DSCP -> TC AND COLOR MAP [sai_object_id_t] on switch
-     * MAP id = SAI_NULL_OBJECT_ID to disable map on switch.
-     * To enable/disable trust DSCP, Map ID should be add/remove on switch.
-     * Default no map */
-    SAI_SWITCH_ATTR_QOS_DSCP_TO_TC_AND_COLOR_MAP,
-
     /** Enable TC -> Queue MAP [sai_object_id_t] on switch
      * Map id = SAI_NULL_OBJECT_ID to disable map on switch.
      * Default no map i.e All packets to queue 0.
      */
     SAI_SWITCH_ATTR_QOS_TC_TO_QUEUE_MAP,
 
-    /** Enable TC -> DOT1P MAP [sai_object_id_t]
-       Map id = SAI_NULL_OBJECT_ID to disable map on switch.
-       Default no map */
-    SAI_SWITCH_ATTR_QOS_TC_TO_DOT1P_MAP,
-
     /** Enable TC + COLOR -> DOT1P MAP [sai_object_id_t]
        Map id = SAI_NULL_OBJECT_ID to disable map on switch.
        Default no map */
     SAI_SWITCH_ATTR_QOS_TC_AND_COLOR_TO_DOT1P_MAP,
 
-    /** Enable TC -> DSCP MAP [sai_object_id_t]
-       Map id = SAI_NULL_OBJECT_ID to disable map on switch.
-       Default no map */
-    SAI_SWITCH_ATTR_QOS_TC_TO_DSCP_MAP,
-
     /** Enable TC + COLOR -> DSCP MAP [sai_object_id_t]
        Map id = SAI_NULL_OBJECT_ID to disable map on switch.
        Default no map */
     SAI_SWITCH_ATTR_QOS_TC_AND_COLOR_TO_DSCP_MAP,
+    
+    /* Enable switch shell [bool] (default to false) */
+    SAI_SWITCH_ATTR_SWITCH_SHELL_ENABLE,
 
     /** WRITE-ONLY */
 
@@ -422,11 +509,62 @@ typedef enum _sai_switch_attr_t
     SAI_SWITCH_ATTR_PORT_BREAKOUT,
 
     /* -- */
+    SAI_SWITCH_ATTR_END,
 
     /* Custom range base value */
-    SAI_SWITCH_ATTR_CUSTOM_RANGE_BASE  = 0x10000000
+    SAI_SWITCH_ATTR_CUSTOM_RANGE_BASE = 0x10000000,
+
+    /* --*/
+    SAI_SWITCH_ATTR_CUSTOM_RANGE_END
+
 
 } sai_switch_attr_t;
+
+/**
+ * @def SAI_SWITCH_ATTR_MAX_KEY_STRING_LEN
+ * Maximum length of switch attribute key string that can be set using key=value
+ */
+#define SAI_SWITCH_ATTR_MAX_KEY_STRING_LEN    64
+
+/**
+ * @def SAI_SWITCH_ATTR_MAX_KEY_COUNT
+ * Maximum count of switch attribute keys
+ * @note This value needs to be incremented whenever a new switch attribute key
+ * is added.
+ */
+#define SAI_SWITCH_ATTR_MAX_KEY_COUNT         16
+
+/**
+ * List of switch attributes keys that can be set using key=value
+ */
+#define SAI_KEY_FDB_TABLE_SIZE                    "SAI_FDB_TABLE_SIZE"
+#define SAI_KEY_L3_ROUTE_TABLE_SIZE               "SAI_L3_ROUTE_TABLE_SIZE"
+#define SAI_KEY_L3_NEIGHBOR_TABLE_SIZE            "SAI_L3_NEIGHBOR_TABLE_SIZE"
+#define SAI_KEY_NUM_LAG_MEMBERS                   "SAI_NUM_LAG_MEMBERS"
+#define SAI_KEY_NUM_LAGS                          "SAI_NUM_LAGS"
+#define SAI_KEY_NUM_ECMP_MEMBERS                  "SAI_NUM_ECMP_MEMBERS"
+#define SAI_KEY_NUM_ECMP_GROUPS                   "SAI_NUM_ECMP_GROUPS"
+#define SAI_KEY_NUM_UNICAST_QUEUES                "SAI_NUM_UNICAST_QUEUES"
+#define SAI_KEY_NUM_MULTICAST_QUEUES              "SAI_NUM_MULTICAST_QUEUES"
+#define SAI_KEY_NUM_QUEUES                        "SAI_NUM_QUEUES"
+#define SAI_KEY_NUM_CPU_QUEUES                    "SAI_NUM_CPU_QUEUES"
+#define SAI_KEY_INIT_CONFIG_FILE                  "SAI_INIT_CONFIG_FILE"
+/** 0: cold boot. Initialize NPU and external phys.
+ *  1: warm boot. Do not re-initialize NPU or external phys, reconstruct SAI/SDK state from stored state.
+ *  2: fast boot. Only initilize NPU. SAI/SDK state should not be persisted except for those related 
+ *                to physical port attributes such as SPEED, AUTONEG mode, admin state, oper status. 
+ */
+#define SAI_KEY_BOOT_TYPE                         "SAI_BOOT_TYPE"
+/** The file to recover SAI/NPU state from */
+#define SAI_KEY_WARM_BOOT_READ_FILE               "SAI_WARM_BOOT_READ_FILE"
+/** The file to write SAI/NPU state to */
+#define SAI_KEY_WARM_BOOT_WRITE_FILE              "SAI_WARM_BOOT_WRITE_FILE"
+/** Vendor specific Configuration file for Hardware Port Profile ID parameters.
+ * HW port profile ID can be used to set vendor specific port attributes based on
+ * the tranceiver type plugged in to the port
+ */
+#define SAI_KEY_HW_PORT_PROFILE_ID_CONFIG_FILE    "SAI_HW_PORT_PROFILE_ID_CONFIG_FILE"
+
 
 /**
  * Routine Description:
@@ -575,7 +713,7 @@ typedef sai_status_t (*sai_set_switch_attribute_fn)(
  *            Failure status code on error
  */
 typedef sai_status_t (*sai_get_switch_attribute_fn)(
-    _In_ uint32_t attr_count,
+    _In_ sai_uint32_t attr_count,
     _Inout_ sai_attribute_t *attr_list
     );
 
@@ -597,4 +735,3 @@ typedef struct _sai_switch_api_t
  *\}
  */
 #endif  // __SAISWITCH_H_
-

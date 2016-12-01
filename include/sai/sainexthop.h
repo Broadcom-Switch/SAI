@@ -44,9 +44,12 @@ typedef enum _sai_next_hop_type_t
 {
     SAI_NEXT_HOP_IP,
 
-    /** 
-    Tunneling to be added later
-    */
+    /*MPLS(NHLFE) next hop */
+    SAI_NEXT_HOP_MPLS,
+ /*tunnel next hop */ 
+    SAI_NEXT_HOP_TUNNEL_DECAP,
+    
+    SAI_NEXT_HOP_TUNNEL_ENCAP
 
 } sai_next_hop_type_t;
 
@@ -70,7 +73,10 @@ typedef enum _sai_next_hop_attr_t
     /** Next hop entry router interface id [sai_object_id_t] (MANDATORY_ON_CREATE|CREATE_ONLY) */
     SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID,
 
-    /* -- */
+    /** Next hop entry tunnel-id [sai_object_id_t]
+     * (MANDATORY_ON_CREATE when SAI_NEXT_HOP_ATTR_TYPE = SAI_NEXT_HOP_TUNNEL_DECAP | SAI_NEXT_HOP_TUNNEL_ENCAP)
+     * (CREATE_ONLY) */
+    SAI_NEXT_HOP_ATTR_TUNNEL_ID,
 
     /** Custom range base value */
     SAI_NEXT_HOP_ATTR_CUSTOM_RANGE_BASE  = 0x10000000
