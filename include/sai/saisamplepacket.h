@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc
+ *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
  *
  * @file    saisamplepacket.h
  *
@@ -50,6 +50,7 @@ typedef enum _sai_samplepacket_mode_t
 {
     /**
      * @brief A profile defining sample packet attributes.
+     *
      * The profile can be configured on a port or as ACL entry action,
      * in which case, an actual session is instantiated which is private
      * for that port or ACL.
@@ -60,6 +61,7 @@ typedef enum _sai_samplepacket_mode_t
 
     /**
      * @brief An instance of sample packet session.
+     *
      * This session can be attached to multiple ports and ACL entries.
      * Traffic going through these ports or matching these ACL entries
      * is merged from a sampling point of view.
@@ -125,7 +127,7 @@ typedef enum _sai_samplepacket_attr_t
 /**
  * @brief Create samplepacket session.
  *
- * @param[out] session_id Samplepacket session id
+ * @param[out] samplepacket_id Samplepacket session id
  * @param[in] switch_id Switch id
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Value of attributes
@@ -142,7 +144,7 @@ typedef sai_status_t (*sai_create_samplepacket_fn)(
 /**
  * @brief Remove samplepacket session.
  *
- * @param[in] session_id Samplepacket session id
+ * @param[in] samplepacket_id Samplepacket session id
  *
  * @return #SAI_STATUS_SUCCESS if operation is successful otherwise a different
  * error code is returned.
@@ -153,7 +155,7 @@ typedef sai_status_t (*sai_remove_samplepacket_fn)(
 /**
  * @brief Set samplepacket session attributes.
  *
- * @param[in] session_id Samplepacket session id
+ * @param[in] samplepacket_id Samplepacket session id
  * @param[in] attr Value of attribute
  *
  * @return #SAI_STATUS_SUCCESS if operation is successful otherwise a different
@@ -166,7 +168,7 @@ typedef sai_status_t (*sai_set_samplepacket_attribute_fn)(
 /**
  * @brief Get samplepacket session attributes.
  *
- * @param[in] session_id Samplepacket session id
+ * @param[in] samplepacket_id Samplepacket session id
  * @param[in] attr_count Number of attributes
  * @param[inout] attr_list Value of attribute
  *
@@ -174,7 +176,7 @@ typedef sai_status_t (*sai_set_samplepacket_attribute_fn)(
  * error code is returned.
  */
 typedef sai_status_t (*sai_get_samplepacket_attribute_fn)(
-        _In_ sai_object_id_t sample_packet_id,
+        _In_ sai_object_id_t samplepacket_id,
         _In_ uint32_t attr_count,
         _Inout_ sai_attribute_t *attr_list);
 

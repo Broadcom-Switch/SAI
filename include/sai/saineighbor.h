@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc
+ *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
  *
  * @file    saineighbor.h
  *
@@ -25,7 +25,6 @@
  *
  *    This module defines SAI neighbor table API
  *    The table contains both IPv4 and IPv6 neighbors
- *
  */
 
 #if !defined (__SAINEIGHBOR_H_)
@@ -65,6 +64,19 @@ typedef enum _sai_neighbor_entry_attr_t
      * @default SAI_PACKET_ACTION_FORWARD
      */
     SAI_NEIGHBOR_ENTRY_ATTR_PACKET_ACTION,
+
+    /**
+     * @brief Generate User Defined Trap ID for trap/log actions
+     *
+     * When it is SAI_NULL_OBJECT_ID, then packet will not be trapped.
+     *
+     * @type sai_object_id_t
+     * @flags CREATE_AND_SET
+     * @objects SAI_OBJECT_TYPE_HOSTIF_USER_DEFINED_TRAP
+     * @allownull true
+     * @default SAI_NULL_OBJECT_ID
+     */
+    SAI_NEIGHBOR_ENTRY_ATTR_USER_TRAP_ID,
 
     /**
      * @brief Neighbor not to be programmed as a host route entry in ASIC and
@@ -138,7 +150,7 @@ typedef struct _sai_neighbor_entry_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_create_neighbor_entry_fn)(
         _In_ const sai_neighbor_entry_t *neighbor_entry,
@@ -152,7 +164,7 @@ typedef sai_status_t (*sai_create_neighbor_entry_fn)(
  *
  * @param[in] neighbor_entry Neighbor entry
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_remove_neighbor_entry_fn)(
         _In_ const sai_neighbor_entry_t *neighbor_entry);
@@ -163,7 +175,7 @@ typedef sai_status_t (*sai_remove_neighbor_entry_fn)(
  * @param[in] neighbor_entry Neighbor entry
  * @param[in] attr Attribute
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_set_neighbor_entry_attribute_fn)(
         _In_ const sai_neighbor_entry_t *neighbor_entry,
@@ -176,7 +188,7 @@ typedef sai_status_t (*sai_set_neighbor_entry_attribute_fn)(
  * @param[in] attr_count Number of attributes
  * @param[inout] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_get_neighbor_entry_attribute_fn)(
         _In_ const sai_neighbor_entry_t *neighbor_entry,
@@ -187,7 +199,7 @@ typedef sai_status_t (*sai_get_neighbor_entry_attribute_fn)(
  * @brief Remove all neighbor entries
  *
  * @param[in] switch_id Switch id
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_remove_all_neighbor_entries_fn)(
         _In_ sai_object_id_t switch_id);

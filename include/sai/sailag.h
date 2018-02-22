@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc
+ *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
  *
  * @file    sailag.h
  *
@@ -87,6 +87,45 @@ typedef enum _sai_lag_attr_t
     SAI_LAG_ATTR_EGRESS_ACL,
 
     /**
+     * @brief Port VLAN ID
+     *
+     * Untagged ingress frames are tagged with Port VLAN ID (PVID)
+     *
+     * @type sai_uint16_t
+     * @flags CREATE_AND_SET
+     * @isvlan true
+     * @default 1
+     */
+    SAI_LAG_ATTR_PORT_VLAN_ID,
+
+    /**
+     * @brief Default VLAN Priority
+     *
+     * @type sai_uint8_t
+     * @flags CREATE_AND_SET
+     * @default 0
+     */
+    SAI_LAG_ATTR_DEFAULT_VLAN_PRIORITY,
+
+    /**
+     * @brief Dropping of untagged frames on ingress
+     *
+     * @type bool
+     * @flags CREATE_AND_SET
+     * @default false
+     */
+    SAI_LAG_ATTR_DROP_UNTAGGED,
+
+    /**
+     * @brief Dropping of tagged frames on ingress
+     *
+     * @type bool
+     * @flags CREATE_AND_SET
+     * @default false
+     */
+    SAI_LAG_ATTR_DROP_TAGGED,
+
+    /**
      * @brief End of attributes
      */
     SAI_LAG_ATTR_END,
@@ -107,9 +146,9 @@ typedef enum _sai_lag_attr_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
-typedef sai_status_t(*sai_create_lag_fn)(
+typedef sai_status_t (*sai_create_lag_fn)(
         _Out_ sai_object_id_t *lag_id,
         _In_ sai_object_id_t switch_id,
         _In_ uint32_t attr_count,
@@ -120,9 +159,9 @@ typedef sai_status_t(*sai_create_lag_fn)(
  *
  * @param[in] lag_id LAG id
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
-typedef sai_status_t(*sai_remove_lag_fn)(
+typedef sai_status_t (*sai_remove_lag_fn)(
         _In_ sai_object_id_t lag_id);
 
 /**
@@ -131,7 +170,7 @@ typedef sai_status_t(*sai_remove_lag_fn)(
  * @param[in] lag_id LAG id
  * @param[in] attr Structure containing ID and value to be set
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_set_lag_attribute_fn)(
         _In_ sai_object_id_t lag_id,
@@ -144,7 +183,7 @@ typedef sai_status_t (*sai_set_lag_attribute_fn)(
  * @param[in] attr_count Number of attributes to be get
  * @param[inout] attr_list List of structures containing ID and value to be get
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_get_lag_attribute_fn)(
         _In_ sai_object_id_t lag_id,
@@ -218,9 +257,9 @@ typedef enum _sai_lag_member_attr_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
-typedef sai_status_t(*sai_create_lag_member_fn)(
+typedef sai_status_t (*sai_create_lag_member_fn)(
         _Out_ sai_object_id_t *lag_member_id,
         _In_ sai_object_id_t switch_id,
         _In_ uint32_t attr_count,
@@ -231,9 +270,9 @@ typedef sai_status_t(*sai_create_lag_member_fn)(
  *
  * @param[in] lag_member_id LAG Member id
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
-typedef sai_status_t(*sai_remove_lag_member_fn)(
+typedef sai_status_t (*sai_remove_lag_member_fn)(
         _In_ sai_object_id_t lag_member_id);
 
 /**
@@ -242,7 +281,7 @@ typedef sai_status_t(*sai_remove_lag_member_fn)(
  * @param[in] lag_member_id LAG Member id
  * @param[in] attr Structure containing ID and value to be set
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_set_lag_member_attribute_fn)(
         _In_ sai_object_id_t lag_member_id,
@@ -255,7 +294,7 @@ typedef sai_status_t (*sai_set_lag_member_attribute_fn)(
  * @param[in] attr_count Number of attributes to be get
  * @param[inout] attr_list List of structures containing ID and value to be get
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_get_lag_member_attribute_fn)(
         _In_ sai_object_id_t lag_member_id,

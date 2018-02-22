@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc
+ *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
  *
  * @file    sail2mc.h
  *
@@ -58,18 +58,12 @@ typedef struct _sai_l2mc_entry_t
      */
     sai_object_id_t switch_id;
 
-    /** Bridge type */
-    sai_fdb_entry_bridge_type_t bridge_type;
-
-    /** Vlan ID. Valid for .1Q */
-    sai_vlan_id_t vlan_id;
-
     /**
-     * @brief Bridge ID. Valid for .1D
+     * @brief Bridge ID. for .1D and Vlan ID for .1Q
      *
-     * @objects SAI_OBJECT_TYPE_BRIDGE
+     * @objects SAI_OBJECT_TYPE_BRIDGE, SAI_OBJECT_TYPE_VLAN
      */
-    sai_object_id_t bridge_id;
+    sai_object_id_t bv_id;
 
     /** L2MC entry type */
     sai_l2mc_entry_type_t type;
@@ -102,8 +96,8 @@ typedef enum _sai_l2mc_entry_attr_t
     /**
      * @brief L2MC entry output group id
      *
-     * This attribute only takes effect when ATTR_PACKET_ACTION is set to FORWARD.
-     * If the group has no member, packets will be discarded.
+     * This attribute only takes effect when ATTR_PACKET_ACTION is set to
+     * FORWARD. If the group has no member, packets will be discarded.
      *
      * @type sai_object_id_t
      * @flags CREATE_AND_SET
@@ -119,7 +113,7 @@ typedef enum _sai_l2mc_entry_attr_t
      */
     SAI_L2MC_ENTRY_ATTR_END,
 
-    /* Custom range base value */
+    /** Custom range base value */
     SAI_L2MC_ENTRY_ATTR_CUSTOM_RANGE_START = 0x10000000,
 
     /** End of custom range base */
@@ -134,7 +128,7 @@ typedef enum _sai_l2mc_entry_attr_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_create_l2mc_entry_fn)(
         _In_ const sai_l2mc_entry_t *l2mc_entry,
@@ -146,7 +140,7 @@ typedef sai_status_t (*sai_create_l2mc_entry_fn)(
  *
  * @param[in] l2mc_entry L2MC entry
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_remove_l2mc_entry_fn)(
         _In_ const sai_l2mc_entry_t *l2mc_entry);
@@ -157,7 +151,7 @@ typedef sai_status_t (*sai_remove_l2mc_entry_fn)(
  * @param[in] l2mc_entry L2MC entry
  * @param[in] attr Attribute
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_set_l2mc_entry_attribute_fn)(
         _In_ const sai_l2mc_entry_t *l2mc_entry,
@@ -170,7 +164,7 @@ typedef sai_status_t (*sai_set_l2mc_entry_attribute_fn)(
  * @param[in] attr_count Number of attributes
  * @param[inout] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_get_l2mc_entry_attribute_fn)(
         _In_ const sai_l2mc_entry_t *l2mc_entry,

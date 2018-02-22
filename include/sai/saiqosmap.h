@@ -15,15 +15,15 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc
+ *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
  *
  * @file    saiqosmap.h
  *
  * @brief   This module defines SAI QOS Maps interface
  */
 
-#if !defined (__SAIQOSMAPS_H_)
-#define __SAIQOSMAPS_H_
+#if !defined (__SAIQOSMAP_H_)
+#define __SAIQOSMAP_H_
 
 #include <saitypes.h>
 
@@ -115,7 +115,7 @@ typedef enum _sai_qos_map_attr_t
     /** End of custom range base */
     SAI_QOS_MAP_ATTR_CUSTOM_RANGE_END
 
-} sai_qos_map_attr_t ;
+} sai_qos_map_attr_t;
 
 /**
  * @brief Create QOS Map
@@ -125,7 +125,7 @@ typedef enum _sai_qos_map_attr_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_create_qos_map_fn)(
         _Out_ sai_object_id_t *qos_map_id,
@@ -138,9 +138,9 @@ typedef sai_status_t (*sai_create_qos_map_fn)(
  *
  * @param[in] qos_map_id QOS Map id to be removed.
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
-typedef sai_status_t (*sai_remove_qos_map_fn) (
+typedef sai_status_t (*sai_remove_qos_map_fn)(
         _In_ sai_object_id_t qos_map_id);
 
 /**
@@ -149,7 +149,7 @@ typedef sai_status_t (*sai_remove_qos_map_fn) (
  * @param[in] qos_map_id QOS Map Id
  * @param[in] attr Attribute to set
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_set_qos_map_attribute_fn)(
         _In_ sai_object_id_t qos_map_id,
@@ -162,10 +162,10 @@ typedef sai_status_t (*sai_set_qos_map_attribute_fn)(
  * @param[in] attr_count Number of attributes
  * @param[inout] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_get_qos_map_attribute_fn)(
-        _In_ sai_object_id_t qos_map_id ,
+        _In_ sai_object_id_t qos_map_id,
         _In_ uint32_t attr_count,
         _Inout_ sai_attribute_t *attr_list);
 
@@ -184,4 +184,4 @@ typedef struct _sai_qos_map_api_t
 /**
  * @}
  */
-#endif /** __SAIQOSMAPS_H_ */
+#endif /** __SAIQOSMAP_H_ */

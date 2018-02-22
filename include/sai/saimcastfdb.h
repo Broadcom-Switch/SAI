@@ -15,15 +15,15 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc
+ *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
  *
  * @file    saimcastfdb.h
  *
  * @brief   This module defines SAI multicast FDB interface
  */
 
-#if !defined (__SAIMCFDB_H_)
-#define __SAIMCFDB_H_
+#if !defined (__SAIMCASTFDB_H_)
+#define __SAIMCASTFDB_H_
 
 #include <saitypes.h>
 
@@ -48,8 +48,12 @@ typedef struct _sai_mcast_fdb_entry_t
     /** MAC address */
     sai_mac_t mac_address;
 
-    /** Vlan ID */
-    sai_vlan_id_t vlan_id;
+    /**
+     * @brief Bridge ID. for .1D and Vlan ID for .1Q
+     *
+     * @objects SAI_OBJECT_TYPE_BRIDGE, SAI_OBJECT_TYPE_VLAN
+     */
+    sai_object_id_t bv_id;
 
 } sai_mcast_fdb_entry_t;
 
@@ -110,50 +114,50 @@ typedef enum _sai_mcast_fdb_entry_attr_t
 /**
  * @brief Create Multicast FDB entry
  *
- * @param[in] fdb_entry FDB entry
+ * @param[in] mcast_fdb_entry FDB entry
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_create_mcast_fdb_entry_fn)(
-        _In_ const sai_mcast_fdb_entry_t *fdb_entry,
+        _In_ const sai_mcast_fdb_entry_t *mcast_fdb_entry,
         _In_ uint32_t attr_count,
         _In_ const sai_attribute_t *attr_list);
 
 /**
  * @brief Remove Multicast FDB entry
  *
- * @param[in] fdb_entry FDB entry
+ * @param[in] mcast_fdb_entry FDB entry
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_remove_mcast_fdb_entry_fn)(
-        _In_ const sai_mcast_fdb_entry_t *fdb_entry);
+        _In_ const sai_mcast_fdb_entry_t *mcast_fdb_entry);
 
 /**
  * @brief Set multicast FDB entry attribute value
  *
- * @param[in] fdb_entry FDB entry
+ * @param[in] mcast_fdb_entry FDB entry
  * @param[in] attr Attribute
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_set_mcast_fdb_entry_attribute_fn)(
-        _In_ const sai_mcast_fdb_entry_t *fdb_entry,
+        _In_ const sai_mcast_fdb_entry_t *mcast_fdb_entry,
         _In_ const sai_attribute_t *attr);
 
 /**
  * @brief Get FDB entry attribute value
  *
- * @param[in] fdb_entry FDB entry
+ * @param[in] mcast_fdb_entry FDB entry
  * @param[in] attr_count Number of attributes
  * @param[inout] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_get_mcast_fdb_entry_attribute_fn)(
-        _In_ const sai_mcast_fdb_entry_t *fdb_entry,
+        _In_ const sai_mcast_fdb_entry_t *mcast_fdb_entry,
         _In_ uint32_t attr_count,
         _Inout_ sai_attribute_t *attr_list);
 
@@ -172,4 +176,4 @@ typedef struct _sai_mcast_fdb_api_t
 /**
  * @}
  */
-#endif /** __SAIMCFDB_H_ */
+#endif /** __SAIMCASTFDB_H_ */
