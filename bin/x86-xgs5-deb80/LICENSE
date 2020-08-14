@@ -197,4 +197,6 @@ bin/x86-xgs5-deb80/   - Dell s6000 Switch System
   linux-kernel-bde.ko                -> Covered by GPLv2
   linux-user-bde.ko                  -> Covered by GPLv2
   linux-bcm-knet.ko                  -> Covered by GPLv2
+  linux-knet-cb.ko                   -> Covered by GPLv2
+  psample.ko                         -> Covered by GPLv2
 

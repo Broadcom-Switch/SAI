@@ -73,7 +73,11 @@ typedef enum _sai_port_oper_status_t
  */
 typedef struct _sai_port_oper_status_notification_t
 {
-    /** Port id */
+    /**
+     * @brief Port id.
+     *
+     * @objects SAI_OBJECT_TYPE_PORT, SAI_OBJECT_TYPE_BRIDGE_PORT, SAI_OBJECT_TYPE_LAG
+     */
     sai_object_id_t port_id;
 
     /** Port operational status */
@@ -167,6 +171,35 @@ typedef enum _sai_port_fec_mode_t
     /** Enable FC-FEC - 10G, 25G, 40G, 50G ports */
     SAI_PORT_FEC_MODE_FC,
 } sai_port_fec_mode_t;
+
+/**
+ * @brief Priority flow control mode
+ */
+typedef enum _sai_port_priority_flow_control_mode_t
+{
+    /** Same value for RX/TX */
+    SAI_PORT_PRIORITY_FLOW_CONTROL_MODE_COMBINED,
+
+    /** Separate values for RX/TX */
+    SAI_PORT_PRIORITY_FLOW_CONTROL_MODE_SEPARATE,
+
+} sai_port_priority_flow_control_mode_t;
+
+/**
+ * @brief PTP mode
+ */
+typedef enum _sai_port_ptp_mode_t
+{
+    /** No special processing for PTP packets */
+    SAI_PORT_PTP_MODE_NONE,
+
+    /** Single-step Timestamp mode for the PTP packets */
+    SAI_PORT_PTP_MODE_SINGLE_STEP_TIMESTAMP,
+
+    /** Two-step Timestamp mode for the PTP packets */
+    SAI_PORT_PTP_MODE_TWO_STEP_TIMESTAMP,
+
+} sai_port_ptp_mode_t;
 
 /**
  * @brief Attribute Id in sai_set_port_attribute() and
@@ -384,6 +417,25 @@ typedef enum _sai_port_attr_t
      */
     SAI_PORT_ATTR_INGRESS_PRIORITY_GROUP_LIST,
 
+    /**
+     * @brief List of port's lanes eye values
+     *
+     * @type sai_port_eye_values_list_t
+     * @flags READ_ONLY
+     */
+    SAI_PORT_ATTR_EYE_VALUES,
+
+    /**
+     * @brief Operational speed in Mbps
+     *
+     * If port is down, the returned value should be zero.
+     * If auto negotiation is on, the returned value should be the negotiated speed.
+     *
+     * @type sai_uint32_t
+     * @flags READ_ONLY
+     */
+    SAI_PORT_ATTR_OPER_SPEED,
+
     /* READ-WRITE */
 
     /**
@@ -396,6 +448,8 @@ typedef enum _sai_port_attr_t
 
     /**
      * @brief Speed in Mbps
+     *
+     * On get, returns the configured port speed.
      *
      * @type sai_uint32_t
      * @flags MANDATORY_ON_CREATE | CREATE_AND_SET
@@ -929,15 +983,49 @@ typedef enum _sai_port_attr_t
     SAI_PORT_ATTR_QOS_EGRESS_BUFFER_PROFILE_LIST,
 
     /**
+     * @brief Combined or separate Bit vectors for port PFC RX/TX
+     *
+     * @type sai_port_priority_flow_control_mode_t
+     * @flags CREATE_AND_SET
+     * @default SAI_PORT_PRIORITY_FLOW_CONTROL_MODE_COMBINED
+     */
+    SAI_PORT_ATTR_PRIORITY_FLOW_CONTROL_MODE,
+
+    /**
      * @brief Bit vector enable/disable port PFC
      *
-     * Valid from bit 0 to bit 7.
+     * Valid from bit 0 to bit 7, for combined RX/TX control mode
      *
      * @type sai_uint8_t
      * @flags CREATE_AND_SET
      * @default 0
+     * @validonly SAI_PORT_ATTR_PRIORITY_FLOW_CONTROL_MODE == SAI_PORT_PRIORITY_FLOW_CONTROL_MODE_COMBINED
      */
     SAI_PORT_ATTR_PRIORITY_FLOW_CONTROL,
+
+    /**
+     * @brief Bit vector enable/disable port PFC RX
+     *
+     * Valid from bit 0 to bit 7, for separate RX/TX control mode
+     *
+     * @type sai_uint8_t
+     * @flags CREATE_AND_SET
+     * @default 0
+     * @validonly SAI_PORT_ATTR_PRIORITY_FLOW_CONTROL_MODE == SAI_PORT_PRIORITY_FLOW_CONTROL_MODE_SEPARATE
+     */
+    SAI_PORT_ATTR_PRIORITY_FLOW_CONTROL_RX,
+
+    /**
+     * @brief Bit vector enable/disable port PFC TX
+     *
+     * Valid from bit 0 to bit 7, for separate RX/TX control mode
+     *
+     * @type sai_uint8_t
+     * @flags CREATE_AND_SET
+     * @default 0
+     * @validonly SAI_PORT_ATTR_PRIORITY_FLOW_CONTROL_MODE == SAI_PORT_PRIORITY_FLOW_CONTROL_MODE_SEPARATE
+     */
+    SAI_PORT_ATTR_PRIORITY_FLOW_CONTROL_TX,
 
     /**
      * @brief User based Meta Data
@@ -952,6 +1040,8 @@ typedef enum _sai_port_attr_t
 
     /**
      * @brief Egress block port list
+     *
+     * Needs to be deprecated. Isolation group can be used instead.
      *
      * Traffic ingressing on this port and egressing out of the ports in the
      * given port list will be dropped.
@@ -1028,6 +1118,116 @@ typedef enum _sai_port_attr_t
     SAI_PORT_ATTR_PORT_POOL_LIST,
 
     /**
+     * @brief Isolation group id
+     *
+     * Packets ingressing on the port should not be forwarded to the
+     * members present in the isolation group.The isolation group type
+     * should be SAI_ISOLATION_GROUP_TYPE_PORT.
+     *
+     * @type sai_object_id_t
+     * @flags CREATE_AND_SET
+     * @objects SAI_OBJECT_TYPE_ISOLATION_GROUP
+     * @allownull true
+     * @default SAI_NULL_OBJECT_ID
+     */
+    SAI_PORT_ATTR_ISOLATION_GROUP,
+
+    /**
+     * @brief Port packet transmission enable
+     *
+     * Enable/Disable packet transmission of a port. When packet transmission
+     * is disabled on a port, packets are still subject to regular ingress and egress
+     * admission control to determine the actions on a packet: whether it is
+     * dropped (immediately or after timeout), or whether it is kept in buffers
+     * internal to the switch before packet transmission is enabled on the port.
+     *
+     * @type bool
+     * @flags CREATE_AND_SET
+     * @default true
+     */
+    SAI_PORT_ATTR_PKT_TX_ENABLE,
+
+    /**
+     * @brief Port bind point for TAM object
+     *
+     * @type sai_object_list_t
+     * @flags CREATE_AND_SET
+     * @objects SAI_OBJECT_TYPE_TAM
+     * @default empty
+     */
+    SAI_PORT_ATTR_TAM_OBJECT,
+
+    /**
+     * @brief Port serdes control pre-emphasis
+     *
+     * Deprecated. Use SAI_OBJECT_TYPE_PORT_SERDES
+     * List of port serdes pre-emphasis values. The values are of type sai_u32_list_t
+     * where the count is number lanes in a port and the list specifies list of values
+     * to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_AND_SET
+     * @default internal
+     */
+    SAI_PORT_ATTR_SERDES_PREEMPHASIS,
+
+    /**
+     * @brief Port serdes control idriver
+     *
+     * Deprecated. Use SAI_OBJECT_TYPE_PORT_SERDES
+     * List of port serdes idriver values. The values are of type sai_u32_list_t
+     * where the count is number lanes in a port and the list specifies list of values
+     * to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_AND_SET
+     * @default internal
+     */
+    SAI_PORT_ATTR_SERDES_IDRIVER,
+
+    /**
+     * @brief Port serdes control ipredriver
+     *
+     * Deprecated. Use SAI_OBJECT_TYPE_PORT_SERDES
+     * List of port serdes ipredriver values. The values are of type sai_u32_list_t
+     * where the count is number lanes in a port and the list specifies list of values
+     * to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_AND_SET
+     * @default internal
+     */
+    SAI_PORT_ATTR_SERDES_IPREDRIVER,
+
+    /**
+     * @brief Enable/Disable Port Link Training
+     *
+     * @type bool
+     * @flags CREATE_AND_SET
+     * @default false
+     */
+    SAI_PORT_ATTR_LINK_TRAINING_ENABLE,
+
+    /**
+     * @brief Configure PTP mode on the port
+     *
+     * @type sai_port_ptp_mode_t
+     * @flags CREATE_AND_SET
+     * @default SAI_PORT_PTP_MODE_NONE
+     */
+    SAI_PORT_ATTR_PTP_MODE,
+
+    /**
+     * @brief Serdes object ID for the port
+     *
+     * @type sai_object_id_t
+     * @flags READ_ONLY
+     * @objects SAI_OBJECT_TYPE_PORT_SERDES
+     * @default internal
+     */
+    SAI_PORT_ATTR_PORT_SERDES_ID,
+
+    /**
      * @brief End of attributes
      */
     SAI_PORT_ATTR_END,
@@ -1042,6 +1242,8 @@ typedef enum _sai_port_attr_t
 
 /**
  * @brief Port counter IDs in sai_get_port_stats() call
+ *
+ * @flags Contains flags
  */
 typedef enum _sai_port_stat_t
 {
@@ -1481,6 +1683,48 @@ typedef enum _sai_port_stat_t
     /** SAI port stat PFC 7 on to off rx pkts */
     SAI_PORT_STAT_PFC_7_ON2OFF_RX_PKTS,
 
+    /** Frames received that are not an integral number of octets in length and do not pass the FCS check */
+    SAI_PORT_STAT_DOT3_STATS_ALIGNMENT_ERRORS,
+
+    /** Frames received that are an integral number of octets in length but do not pass the FCS check */
+    SAI_PORT_STAT_DOT3_STATS_FCS_ERRORS,
+
+    /** Frames that are involved in a single collision, and are subsequently transmitted successfully */
+    SAI_PORT_STAT_DOT3_STATS_SINGLE_COLLISION_FRAMES,
+
+    /** Frames that are involved in a more than one collision collision, and are subsequently transmitted successfully */
+    SAI_PORT_STAT_DOT3_STATS_MULTIPLE_COLLISION_FRAMES,
+
+    /** Number of times that the SQE TEST ERROR is received */
+    SAI_PORT_STAT_DOT3_STATS_SQE_TEST_ERRORS,
+
+    /** Frames for which the first transmission attempt is delayed because the medium is busy */
+    SAI_PORT_STAT_DOT3_STATS_DEFERRED_TRANSMISSIONS,
+
+    /** Number of times that a collision is detected later than one slot time into the transmission of a packet */
+    SAI_PORT_STAT_DOT3_STATS_LATE_COLLISIONS,
+
+    /** Frames for which transmission fails due to excessive collisions */
+    SAI_PORT_STAT_DOT3_STATS_EXCESSIVE_COLLISIONS,
+
+    /** Frames for which transmission fails due to an internal MAC sublayer transmit error */
+    SAI_PORT_STAT_DOT3_STATS_INTERNAL_MAC_TRANSMIT_ERRORS,
+
+    /** Number of times that the carrier sense condition was lost or never asserted when attempting to transmit a frame */
+    SAI_PORT_STAT_DOT3_STATS_CARRIER_SENSE_ERRORS,
+
+    /** Frames received that exceed the maximum permitted frame size */
+    SAI_PORT_STAT_DOT3_STATS_FRAME_TOO_LONGS,
+
+    /** Frames for which reception fails due to an internal MAC sublayer receive error */
+    SAI_PORT_STAT_DOT3_STATS_INTERNAL_MAC_RECEIVE_ERRORS,
+
+    /** Number of times there was an invalid data symbol, incremented at most once per carrier event */
+    SAI_PORT_STAT_DOT3_STATS_SYMBOL_ERRORS,
+
+    /** MAC Control frames received that contain an opcode that is not supported by this device */
+    SAI_PORT_STAT_DOT3_CONTROL_IN_UNKNOWN_OPCODES,
+
     /**
      * @brief Number of times port state changed from
      * high power mode to low power mode in TX direction [uint64_t]
@@ -1506,6 +1750,60 @@ typedef enum _sai_port_stat_t
      * This Duration is accumulative since EEE enable on port/from last clear stats.
      */
     SAI_PORT_STAT_EEE_RX_DURATION,
+
+    /** Port stat in drop reasons range start */
+    SAI_PORT_STAT_IN_DROP_REASON_RANGE_BASE = 0x00001000,
+
+    /** Get in port packet drops configured by debug counter API at index 1 */
+    SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_1_DROPPED_PKTS,
+
+    /** Get in port packet drops configured by debug counter API at index 2 */
+    SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_2_DROPPED_PKTS,
+
+    /** Get in port packet drops configured by debug counter API at index 3 */
+    SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_3_DROPPED_PKTS,
+
+    /** Get in port packet drops configured by debug counter API at index 4 */
+    SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_4_DROPPED_PKTS,
+
+    /** Get in port packet drops configured by debug counter API at index 5 */
+    SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_5_DROPPED_PKTS,
+
+    /** Get in port packet drops configured by debug counter API at index 6 */
+    SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_6_DROPPED_PKTS,
+
+    /** Get in port packet drops configured by debug counter API at index 7 */
+    SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_7_DROPPED_PKTS,
+
+    /** Port stat in drop reasons range end */
+    SAI_PORT_STAT_IN_DROP_REASON_RANGE_END = 0x00001fff,
+
+    /** Port stat out drop reasons range start */
+    SAI_PORT_STAT_OUT_DROP_REASON_RANGE_BASE = 0x00002000,
+
+    /** Get out port packet drops configured by debug counter API at index 1 */
+    SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_1_DROPPED_PKTS,
+
+    /** Get out port packet drops configured by debug counter API at index 2 */
+    SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_2_DROPPED_PKTS,
+
+    /** Get out port packet drops configured by debug counter API at index 3 */
+    SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_3_DROPPED_PKTS,
+
+    /** Get out port packet drops configured by debug counter API at index 4 */
+    SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_4_DROPPED_PKTS,
+
+    /** Get out port packet drops configured by debug counter API at index 5 */
+    SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_5_DROPPED_PKTS,
+
+    /** Get out port packet drops configured by debug counter API at index 6 */
+    SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_6_DROPPED_PKTS,
+
+    /** Get out port packet drops configured by debug counter API at index 7 */
+    SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_7_DROPPED_PKTS,
+
+    /** Port stat out drop reasons range end */
+    SAI_PORT_STAT_OUT_DROP_REASON_RANGE_END = 0x00002fff,
 
 } sai_port_stat_t;
 
@@ -1562,7 +1860,7 @@ typedef sai_status_t (*sai_get_port_attribute_fn)(
         _Inout_ sai_attribute_t *attr_list);
 
 /**
- * @brief Get port statistics counters.
+ * @brief Get port statistics counters. Deprecated for backward compatibility.
  *
  * @param[in] port_id Port id
  * @param[in] number_of_counters Number of counters in the array
@@ -1574,7 +1872,25 @@ typedef sai_status_t (*sai_get_port_attribute_fn)(
 typedef sai_status_t (*sai_get_port_stats_fn)(
         _In_ sai_object_id_t port_id,
         _In_ uint32_t number_of_counters,
-        _In_ const sai_port_stat_t *counter_ids,
+        _In_ const sai_stat_id_t *counter_ids,
+        _Out_ uint64_t *counters);
+
+/**
+ * @brief Get port statistics counters extended.
+ *
+ * @param[in] port_id Port id
+ * @param[in] number_of_counters Number of counters in the array
+ * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] mode Statistics mode
+ * @param[out] counters Array of resulting counter values.
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_get_port_stats_ext_fn)(
+        _In_ sai_object_id_t port_id,
+        _In_ uint32_t number_of_counters,
+        _In_ const sai_stat_id_t *counter_ids,
+        _In_ sai_stats_mode_t mode,
         _Out_ uint64_t *counters);
 
 /**
@@ -1589,7 +1905,7 @@ typedef sai_status_t (*sai_get_port_stats_fn)(
 typedef sai_status_t (*sai_clear_port_stats_fn)(
         _In_ sai_object_id_t port_id,
         _In_ uint32_t number_of_counters,
-        _In_ const sai_port_stat_t *counter_ids);
+        _In_ const sai_stat_id_t *counter_ids);
 
 /**
  * @brief Clear port's all statistics counters.
@@ -1613,7 +1929,7 @@ typedef sai_status_t (*sai_clear_port_all_stats_fn)(
  */
 typedef void (*sai_port_state_change_notification_fn)(
         _In_ uint32_t count,
-        _In_ sai_port_oper_status_notification_t *data);
+        _In_ const sai_port_oper_status_notification_t *data);
 
 /**
  * @brief List of Port buffer pool attributes
@@ -1800,7 +2116,7 @@ typedef sai_status_t (*sai_get_port_pool_attribute_fn)(
         _Inout_ sai_attribute_t *attr_list);
 
 /**
- * @brief Get port pool statistics counters.
+ * @brief Get port pool statistics counters. Deprecated for backward compatibility.
  *
  * @param[in] port_pool_id Port pool id
  * @param[in] number_of_counters Number of counters in the array
@@ -1812,7 +2128,25 @@ typedef sai_status_t (*sai_get_port_pool_attribute_fn)(
 typedef sai_status_t (*sai_get_port_pool_stats_fn)(
         _In_ sai_object_id_t port_pool_id,
         _In_ uint32_t number_of_counters,
-        _In_ const sai_port_pool_stat_t *counter_ids,
+        _In_ const sai_stat_id_t *counter_ids,
+        _Out_ uint64_t *counters);
+
+/**
+ * @brief Get port pool statistics counters extended.
+ *
+ * @param[in] port_pool_id Port pool id
+ * @param[in] number_of_counters Number of counters in the array
+ * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] mode Statistics mode
+ * @param[out] counters Array of resulting counter values.
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_get_port_pool_stats_ext_fn)(
+        _In_ sai_object_id_t port_pool_id,
+        _In_ uint32_t number_of_counters,
+        _In_ const sai_stat_id_t *counter_ids,
+        _In_ sai_stats_mode_t mode,
         _Out_ uint64_t *counters);
 
 /**
@@ -1827,7 +2161,234 @@ typedef sai_status_t (*sai_get_port_pool_stats_fn)(
 typedef sai_status_t (*sai_clear_port_pool_stats_fn)(
         _In_ sai_object_id_t port_pool_id,
         _In_ uint32_t number_of_counters,
-        _In_ const sai_port_pool_stat_t *counter_ids);
+        _In_ const sai_stat_id_t *counter_ids);
+
+/**
+ * @brief List of Port Serdes attributes
+ */
+typedef enum _sai_port_serdes_attr_t
+{
+    /**
+     * @brief Start of attributes
+     */
+    SAI_PORT_SERDES_ATTR_START,
+
+    /**
+     * @brief Port ID
+     *
+     * @type sai_object_id_t
+     * @flags MANDATORY_ON_CREATE | CREATE_ONLY
+     * @objects SAI_OBJECT_TYPE_PORT
+     */
+    SAI_PORT_SERDES_ATTR_PORT_ID = SAI_PORT_SERDES_ATTR_START,
+
+    /**
+     * @brief Port serdes control pre-emphasis
+     *
+     * List of port serdes pre-emphasis values. The values are of type sai_u32_list_t
+     * where the count is number lanes in a port and the list specifies list of values
+     * to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_PREEMPHASIS,
+
+    /**
+     * @brief Port serdes control idriver
+     *
+     * List of port serdes idriver values. The values are of type sai_u32_list_t
+     * where the count is number lanes in a port and the list specifies list of values
+     * to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_IDRIVER,
+
+    /**
+     * @brief Port serdes control pre-emphasis
+     *
+     * List of port serdes ipredriver values. The values are of type sai_u32_list_t
+     * where the count is number lanes in a port and the list specifies list of values
+     * to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_IPREDRIVER,
+
+    /**
+     * @brief Port serdes control TX FIR PRE1 filter
+     *
+     * List of port serdes TX fir precursor1 tap-filter values.
+     * The values are of type sai_u32_list_t where the count is number lanes in
+     * a port and the list specifies list of values to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_TX_FIR_PRE1,
+
+    /**
+     * @brief Port serdes control TX FIR PRE2 filter
+     *
+     * List of port serdes TX fir precursor2 tap-filter values.
+     * The values are of type sai_u32_list_t where the count is number lanes in
+     * a port and the list specifies list of values to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_TX_FIR_PRE2,
+
+    /**
+     * @brief Port serdes control TX FIR PRE3 filter
+     *
+     * List of port serdes TX fir precursor3 tap-filter values.
+     * The values are of type sai_u32_list_t where the count is number lanes in
+     * a port and the list specifies list of values to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_TX_FIR_PRE3,
+
+    /**
+     * @brief Port serdes control TX FIR MAIN filter
+     *
+     * List of port serdes TX fir maincursor tap-filter values.
+     * The values are of type sai_u32_list_t where the count is number lanes in
+     * a port and the list specifies list of values to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_TX_FIR_MAIN,
+
+    /**
+     * @brief Port serdes control TX FIR POST1 filter
+     *
+     * List of port serdes TX fir postcursor1 tap-filter values.
+     * The values are of type sai_u32_list_t where the count is number lanes in
+     * a port and the list specifies list of values to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_TX_FIR_POST1,
+
+    /**
+     * @brief Port serdes control TX FIR POST2 filter
+     *
+     * List of port serdes TX fir postcursor2 tap-filter values.
+     * The values are of type sai_u32_list_t where the count is number lanes in
+     * a port and the list specifies list of values to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_TX_FIR_POST2,
+
+    /**
+     * @brief Port serdes control TX FIR POST3 filter
+     *
+     * List of port serdes TX fir postcursor3 tap-filter values.
+     * The values are of type sai_u32_list_t where the count is number lanes in
+     * a port and the list specifies list of values to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_TX_FIR_POST3,
+
+    /**
+     * @brief Port serdes control TX FIR attenuation
+     *
+     * List of port serdes TX fir attn values.
+     * The values are of type sai_u32_list_t where the count is number lanes in
+     * a port and the list specifies list of values to be applied to each lane.
+     *
+     * @type sai_u32_list_t
+     * @flags CREATE_ONLY
+     * @default internal
+     */
+    SAI_PORT_SERDES_ATTR_TX_FIR_ATTN,
+
+    /**
+     * @brief End of attributes
+     */
+    SAI_PORT_SERDES_ATTR_END,
+
+    /** Custom range base value */
+    SAI_PORT_SERDES_ATTR_CUSTOM_RANGE_START = 0x10000000,
+
+    /** End of custom range base */
+    SAI_PORT_SERDES_ATTR_CUSTOM_RANGE_END
+
+} sai_port_serdes_attr_t;
+
+/**
+ * @brief Create port serdes
+ *
+ * @param[out] port_serdes_id Port serdes id
+ * @param[in] switch_id Switch id
+ * @param[in] attr_count Number of attributes
+ * @param[in] attr_list Array of attributes
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_create_port_serdes_fn)(
+        _Out_ sai_object_id_t *port_serdes_id,
+        _In_ sai_object_id_t switch_id,
+        _In_ uint32_t attr_count,
+        _In_ const sai_attribute_t *attr_list);
+
+/**
+ * @brief Remove port serdes
+ *
+ * @param[in] port_serdes_id Port serdes id
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_remove_port_serdes_fn)(
+        _In_ sai_object_id_t port_serdes_id);
+
+/**
+ * @brief Set Port serdes attribute value.
+ *
+ * @param[in] port_serdes_id Port serdes id
+ * @param[in] attr Attribute
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_set_port_serdes_attribute_fn)(
+        _In_ sai_object_id_t port_serdes_id,
+        _In_ const sai_attribute_t *attr);
+
+/**
+ * @brief Get Port serdes attribute value.
+ *
+ * @param[in] port_serdes_id Port serdes id
+ * @param[in] attr_count Number of attributes
+ * @param[inout] attr_list Array of attributes
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_get_port_serdes_attribute_fn)(
+        _In_ sai_object_id_t port_serdes_id,
+        _In_ uint32_t attr_count,
+        _Inout_ sai_attribute_t *attr_list);
 
 /**
  * @brief Port methods table retrieved with sai_api_query()
@@ -1839,6 +2400,7 @@ typedef struct _sai_port_api_t
     sai_set_port_attribute_fn         set_port_attribute;
     sai_get_port_attribute_fn         get_port_attribute;
     sai_get_port_stats_fn             get_port_stats;
+    sai_get_port_stats_ext_fn         get_port_stats_ext;
     sai_clear_port_stats_fn           clear_port_stats;
     sai_clear_port_all_stats_fn       clear_port_all_stats;
     sai_create_port_pool_fn           create_port_pool;
@@ -1846,7 +2408,12 @@ typedef struct _sai_port_api_t
     sai_set_port_pool_attribute_fn    set_port_pool_attribute;
     sai_get_port_pool_attribute_fn    get_port_pool_attribute;
     sai_get_port_pool_stats_fn        get_port_pool_stats;
+    sai_get_port_pool_stats_ext_fn    get_port_pool_stats_ext;
     sai_clear_port_pool_stats_fn      clear_port_pool_stats;
+    sai_create_port_serdes_fn         create_port_serdes;
+    sai_remove_port_serdes_fn         remove_port_serdes;
+    sai_set_port_serdes_attribute_fn  set_port_serdes_attribute;
+    sai_get_port_serdes_attribute_fn  get_port_serdes_attribute;
 
 } sai_port_api_t;
 

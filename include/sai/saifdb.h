@@ -166,6 +166,19 @@ typedef enum _sai_fdb_entry_attr_t
     SAI_FDB_ENTRY_ATTR_ENDPOINT_IP,
 
     /**
+     * @brief Attach a counter
+     *
+     * When it is empty, then packet hits won't be counted
+     *
+     * @type sai_object_id_t
+     * @flags CREATE_AND_SET
+     * @objects SAI_OBJECT_TYPE_COUNTER
+     * @allownull true
+     * @default SAI_NULL_OBJECT_ID
+     */
+    SAI_FDB_ENTRY_ATTR_COUNTER_ID,
+
+    /**
      * @brief End of attributes
      */
     SAI_FDB_ENTRY_ATTR_END,
@@ -189,6 +202,9 @@ typedef enum _sai_fdb_flush_entry_type_t
     /** Flush static FDB entries */
     SAI_FDB_FLUSH_ENTRY_TYPE_STATIC,
 
+    /** Flush static and dynamic FDB entries */
+    SAI_FDB_FLUSH_ENTRY_TYPE_ALL,
+
 } sai_fdb_flush_entry_type_t;
 
 /**
@@ -196,7 +212,7 @@ typedef enum _sai_fdb_flush_entry_type_t
  *
  * For example, if you want to flush all static entries, set #SAI_FDB_FLUSH_ATTR_ENTRY_TYPE
  * = #SAI_FDB_FLUSH_ENTRY_TYPE_STATIC. If you want to flush both static and dynamic entries,
- * then there is no need to specify the #SAI_FDB_FLUSH_ATTR_ENTRY_TYPE attribute.
+ * then set #SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_ALL.
  * The API uses AND operation when multiple attributes are specified.
  *
  * For example:
@@ -263,6 +279,37 @@ typedef enum _sai_fdb_flush_attr_t
 
 /**
  * @brief Notification data format received from SAI FDB callback
+ *
+ * When FDB flush API is called (for example with no parameters) and switch
+ * learned a lot of MAC addresses, then calling this API can cause to generate
+ * a lot of notifications.
+ *
+ * Vendor can decide whether in that case send notifications 1 by 1 and
+ * populating all the data for sai_fdb_event_notification_data_t or to send
+ * consolidated event notification which will indicate that FDB flush operation
+ * was performed.
+ *
+ * Consolidated flush event will:
+ *
+ * Set data.fdb_entry.mac_address to 00:00:00:00:00:00.
+ *
+ * Set data.fdb_event to SAI_FDB_EVENT_FLUSHED.
+ *
+ * Add SAI_FDB_ENTRY_ATTR_TYPE to data.attr list and value set to
+ * SAI_FDB_FLUSH_ATTR_ENTRY_TYPE, if SAI_FDB_FLUSH_ATTR_ENTRY_TYPE was not
+ * provided to flush API, then 2 notifications will be sent (or 1 notification
+ * with 2 data entries) where data.attr will contain SAI_FDB_ENTRY_ATTR_TYPE
+ * set accordingly for specific entry types.
+ *
+ * Set data.fdb_entry.bv_id to SAI_FDB_FLUSH_ATTR_BV_ID value if attribute was
+ * provided to flush API.
+ *
+ * Add SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID to data.attr list and value set to
+ * SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID if that attribute was provided to flush
+ * API.
+ *
+ * All other attributes in consolidated FDB event notification are irrelevant
+ * and should be zero.
  *
  * @count attr[attr_count]
  */
@@ -360,7 +407,7 @@ typedef sai_status_t (*sai_flush_fdb_entries_fn)(
  */
 typedef void (*sai_fdb_event_notification_fn)(
         _In_ uint32_t count,
-        _In_ sai_fdb_event_notification_data_t *data);
+        _In_ const sai_fdb_event_notification_data_t *data);
 
 /**
  * @brief FDB method table retrieved with sai_api_query()

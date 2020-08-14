@@ -236,6 +236,31 @@ typedef enum _sai_bridge_port_attr_t
     SAI_BRIDGE_PORT_ATTR_INGRESS_FILTERING,
 
     /**
+     * @brief Egress filtering (drop frames with unknown VLANs at egress)
+     *
+     * @type bool
+     * @flags CREATE_AND_SET
+     * @default false
+     * @validonly SAI_BRIDGE_PORT_ATTR_TYPE == SAI_BRIDGE_PORT_TYPE_PORT
+     */
+    SAI_BRIDGE_PORT_ATTR_EGRESS_FILTERING,
+
+    /**
+     * @brief Isolation group id
+     *
+     * Packets ingressing on the bridge port should not be forwarded to the
+     * members present in the isolation group.The isolation group type should
+     * SAI_ISOLATION_GROUP_TYPE_BRIDGE_PORT.
+     *
+     * @type sai_object_id_t
+     * @flags CREATE_AND_SET
+     * @objects SAI_OBJECT_TYPE_ISOLATION_GROUP
+     * @allownull true
+     * @default SAI_NULL_OBJECT_ID
+     */
+    SAI_BRIDGE_PORT_ATTR_ISOLATION_GROUP,
+
+    /**
      * @brief End of attributes
      */
     SAI_BRIDGE_PORT_ATTR_END,
@@ -320,7 +345,7 @@ typedef sai_status_t (*sai_get_bridge_port_attribute_fn)(
         _Inout_ sai_attribute_t *attr_list);
 
 /**
- * @brief Get bridge port statistics counters.
+ * @brief Get bridge port statistics counters. Deprecated for backward compatibility.
  *
  * @param[in] bridge_port_id Bridge port id
  * @param[in] number_of_counters Number of counters in the array
@@ -332,7 +357,25 @@ typedef sai_status_t (*sai_get_bridge_port_attribute_fn)(
 typedef sai_status_t (*sai_get_bridge_port_stats_fn)(
         _In_ sai_object_id_t bridge_port_id,
         _In_ uint32_t number_of_counters,
-        _In_ const sai_bridge_port_stat_t *counter_ids,
+        _In_ const sai_stat_id_t *counter_ids,
+        _Out_ uint64_t *counters);
+
+/**
+ * @brief Get bridge port statistics counters extended.
+ *
+ * @param[in] bridge_port_id Bridge port id
+ * @param[in] number_of_counters Number of counters in the array
+ * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] mode Statistics mode
+ * @param[out] counters Array of resulting counter values.
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_get_bridge_port_stats_ext_fn)(
+        _In_ sai_object_id_t bridge_port_id,
+        _In_ uint32_t number_of_counters,
+        _In_ const sai_stat_id_t *counter_ids,
+        _In_ sai_stats_mode_t mode,
         _Out_ uint64_t *counters);
 
 /**
@@ -347,7 +390,7 @@ typedef sai_status_t (*sai_get_bridge_port_stats_fn)(
 typedef sai_status_t (*sai_clear_bridge_port_stats_fn)(
         _In_ sai_object_id_t bridge_port_id,
         _In_ uint32_t number_of_counters,
-        _In_ const sai_bridge_port_stat_t *counter_ids);
+        _In_ const sai_stat_id_t *counter_ids);
 
 /**
  * @brief Attribute data for #SAI_BRIDGE_ATTR_TYPE
@@ -368,7 +411,13 @@ typedef enum _sai_bridge_type_t
  */
 typedef enum _sai_bridge_flood_control_type_t
 {
-    /** Flood on all sub-ports */
+    /**
+     * @brief Flood on all sub-ports
+     *
+     * When setting sub-ports to broadcast or unknown multicast flood, it also
+     * includes flooding to the router. When setting sub-ports to unknown
+     * unicast flood, it does not include flooding to the router
+     */
     SAI_BRIDGE_FLOOD_CONTROL_TYPE_SUB_PORTS,
 
     /** Disable flooding */
@@ -376,6 +425,14 @@ typedef enum _sai_bridge_flood_control_type_t
 
     /** Flood on the L2MC group */
     SAI_BRIDGE_FLOOD_CONTROL_TYPE_L2MC_GROUP,
+
+    /**
+     * @brief Flood on all sub-ports and L2MC group
+     *
+     * Flood on all sub-ports, without the router
+     * In addition, flood on the supplied L2MC group
+     */
+    SAI_BRIDGE_FLOOD_CONTROL_TYPE_COMBINED
 
 } sai_bridge_flood_control_type_t;
 
@@ -451,7 +508,9 @@ typedef enum _sai_bridge_attr_t
      * @allownull true
      * @default SAI_NULL_OBJECT_ID
      * @validonly SAI_BRIDGE_ATTR_UNKNOWN_UNICAST_FLOOD_CONTROL_TYPE ==
-     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_L2MC_GROUP and SAI_BRIDGE_ATTR_TYPE == SAI_BRIDGE_TYPE_1D
+     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_L2MC_GROUP or
+     * SAI_BRIDGE_ATTR_UNKNOWN_UNICAST_FLOOD_CONTROL_TYPE ==
+     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_COMBINED
      */
     SAI_BRIDGE_ATTR_UNKNOWN_UNICAST_FLOOD_GROUP,
 
@@ -480,7 +539,9 @@ typedef enum _sai_bridge_attr_t
      * @allownull true
      * @default SAI_NULL_OBJECT_ID
      * @validonly SAI_BRIDGE_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE ==
-     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_L2MC_GROUP and SAI_BRIDGE_ATTR_TYPE == SAI_BRIDGE_TYPE_1D
+     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_L2MC_GROUP or
+     * SAI_BRIDGE_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE ==
+     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_COMBINED
      */
     SAI_BRIDGE_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP,
 
@@ -509,7 +570,9 @@ typedef enum _sai_bridge_attr_t
      * @allownull true
      * @default SAI_NULL_OBJECT_ID
      * @validonly SAI_BRIDGE_ATTR_BROADCAST_FLOOD_CONTROL_TYPE ==
-     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_L2MC_GROUP and SAI_BRIDGE_ATTR_TYPE == SAI_BRIDGE_TYPE_1D
+     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_L2MC_GROUP or
+     * SAI_BRIDGE_ATTR_BROADCAST_FLOOD_CONTROL_TYPE ==
+     * SAI_BRIDGE_FLOOD_CONTROL_TYPE_COMBINED
      */
     SAI_BRIDGE_ATTR_BROADCAST_FLOOD_GROUP,
 
@@ -598,7 +661,7 @@ typedef sai_status_t (*sai_get_bridge_attribute_fn)(
         _Inout_ sai_attribute_t *attr_list);
 
 /**
- * @brief Get bridge statistics counters.
+ * @brief Get bridge statistics counters. Deprecated for backward compatibility.
  *
  * @param[in] bridge_id Bridge id
  * @param[in] number_of_counters Number of counters in the array
@@ -610,7 +673,25 @@ typedef sai_status_t (*sai_get_bridge_attribute_fn)(
 typedef sai_status_t (*sai_get_bridge_stats_fn)(
         _In_ sai_object_id_t bridge_id,
         _In_ uint32_t number_of_counters,
-        _In_ const sai_bridge_stat_t *counter_ids,
+        _In_ const sai_stat_id_t *counter_ids,
+        _Out_ uint64_t *counters);
+
+/**
+ * @brief Get bridge statistics counters extended.
+ *
+ * @param[in] bridge_id Bridge id
+ * @param[in] number_of_counters Number of counters in the array
+ * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] mode Statistics mode
+ * @param[out] counters Array of resulting counter values.
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_get_bridge_stats_ext_fn)(
+        _In_ sai_object_id_t bridge_id,
+        _In_ uint32_t number_of_counters,
+        _In_ const sai_stat_id_t *counter_ids,
+        _In_ sai_stats_mode_t mode,
         _Out_ uint64_t *counters);
 
 /**
@@ -625,7 +706,7 @@ typedef sai_status_t (*sai_get_bridge_stats_fn)(
 typedef sai_status_t (*sai_clear_bridge_stats_fn)(
         _In_ sai_object_id_t bridge_id,
         _In_ uint32_t number_of_counters,
-        _In_ const sai_bridge_stat_t *counter_ids);
+        _In_ const sai_stat_id_t *counter_ids);
 
 /**
  * @brief Bridge methods table retrieved with sai_api_query()
@@ -637,12 +718,14 @@ typedef struct _sai_bridge_api_t
     sai_set_bridge_attribute_fn         set_bridge_attribute;
     sai_get_bridge_attribute_fn         get_bridge_attribute;
     sai_get_bridge_stats_fn             get_bridge_stats;
+    sai_get_bridge_stats_ext_fn         get_bridge_stats_ext;
     sai_clear_bridge_stats_fn           clear_bridge_stats;
     sai_create_bridge_port_fn           create_bridge_port;
     sai_remove_bridge_port_fn           remove_bridge_port;
     sai_set_bridge_port_attribute_fn    set_bridge_port_attribute;
     sai_get_bridge_port_attribute_fn    get_bridge_port_attribute;
     sai_get_bridge_port_stats_fn        get_bridge_port_stats;
+    sai_get_bridge_port_stats_ext_fn    get_bridge_port_stats_ext;
     sai_clear_bridge_port_stats_fn      clear_bridge_port_stats;
 } sai_bridge_api_t;
 
