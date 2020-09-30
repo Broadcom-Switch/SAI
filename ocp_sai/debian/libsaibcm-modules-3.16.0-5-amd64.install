@@ -1,0 +1,5 @@
+/lib/modules/3.16.0-5-amd64/extras/linux-bcm-knet.ko
+/lib/modules/3.16.0-5-amd64/extras/linux-kernel-bde.ko
+/lib/modules/3.16.0-5-amd64/extras/linux-user-bde.ko
+/lib/modules/3.16.0-5-amd64/extras/linux-knet-cb.ko
+systemd/libsaibcm-modules-3.16.0-5-amd64.service lib/systemd/system

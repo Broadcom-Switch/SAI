@@ -1,18 +1,14 @@
-# Object files
-*.o
-#*.ko
+/output
+/*_output
+/.nwsoft_archive
+lost+found/
 
-# Libraries
-*.lib
-*.a
+# Ignore top level githelper generated artifacts.
+/Makefile
+/make_configure
+/sections.ini
+/package.cfg
+/tools/build_kernels/
 
-# Shared objects (inc. Windows DLLs)
-*.dll
-#*.so
-#*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
+# Ignore other temp files
+*.swp

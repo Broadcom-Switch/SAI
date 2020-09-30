@@ -1,0 +1,35 @@
+Source: saibcm
+Priority: extra
+Maintainer: Guohan Lu <gulv@microsoft.com>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+Section: libs
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://git.debian.org/collab-maint/sai.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/sai.git;a=summary
+
+Package: libsaibcm-dev
+Section: libdevel
+Architecture: any
+Depends: libsaibcm (= ${binary:Version})
+Provides: libsai-dev
+Description: development files for Switch Abstraction Interface sdk
+
+Package: libsaibcm
+Section: libs
+Architecture: any
+Provides: libsai
+Description: Switch Abstraction Interface sdk based on Broadcom SAI
+
+Package: libsaibcm-dbg
+Section: libs
+Architecture: any
+Provides: libsai
+Description: Switch Abstraction Interface sdk based on Broadcom SAI
+
+Package: libsaibcm-modules-3.16.0-5-amd64
+Architecture: amd64
+Section: main
+Depends: linux-image-3.16.0-5-amd64
+Description: kernel modules for Broadcom SAI sdk
+

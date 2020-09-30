@@ -1,0 +1,877 @@
+#!/bin/sh
+########################################################
+# Extract - Build - Clean (EBC)                        #
+########################################################
+# This script downloads and builds kernel, headers     #
+#                                                      #
+# Input:    <GIT Server Hostname>                      #
+#           <GIT Repository Path>                      #
+#           <GIT Commit ID>                            #
+#           <L7_CPU Name>                              #
+#           <Kernel Config Filename>                   #
+#           <CPU Architecture>                         #
+#           <Cross Compiler Prefix>                    #
+#           <Base Directory of FASTPATH Sources>       #
+#           <make executable used>                     #
+#           <L7_TARGETOS_VARIANT>                      #
+#           <Operation mode build|clean>               #
+#           [Additonal List of CPU arch folders        #
+#            for building external modules ] (optional)#
+#           [List of files that are deleted by         #
+#            make clean but are required for building  #
+#            external modules] (optional)              #
+#                                                      #
+########################################################
+
+usage() {
+   
+   echo "EBC:                                                     "
+   echo "Usage: ebc -s <GIT Repository URL>                       "
+   echo "           -r <GIT Repository Path>                      "
+   echo "           -i <GIT Commit ID>                            "
+   echo "           -c <L7_CPU>                                   "
+   echo "           -f <Kernel Config Filename>                   "
+   echo "           -a <CPU Architecture>                         "
+   echo "           -g <Cross Compiler Prefix>                    "
+   echo "           -v <Base Directory of FASTPATH Sources>       "
+   echo "           -m <make executable used>                     "
+   echo "           -t <L7_TARGETOS_VARIANT>                      "
+   echo "           -o <build|clean>                              "
+   echo "           [ -l <Additonal List of CPU arch folders      "
+   echo "                 for building external modules> ]        "
+   echo "           [ -C List of files that are deleted by        "
+   echo "                make clean but are required for building "
+   echo "                external modules ]                       "
+   echo "           [ -k List of kernel modules to be copied to   "
+   echo "                root folder ]                             "
+   exit 6
+
+}
+
+# Input Parameters
+#
+ARCH_LIST=
+while getopts s:r:i:c:f:a:g:v:m:l:t:C:o:k: OPT
+do
+        case $OPT in
+        s)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      L7_GIT_SERVER=${OPTARG}
+                        ;;
+                esac
+                ;;
+        r)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      L7_GIT_REPO=${OPTARG}
+                        ;;
+                esac
+                ;;
+        i)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      GIT_COMMIT_ID=${OPTARG}
+                        ;;
+                esac
+                ;;
+        c)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      L7_CPU=${OPTARG}
+                        ;;
+                esac
+                ;;
+        f)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      L7_LINUX_CONFIG_FILE=${OPTARG}
+                        ;;
+                esac
+                ;;
+        a)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      L7_CPU_ARCH=${OPTARG}
+                        ;;
+                esac
+                ;;
+        g)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      CROSS_COMPILE=${OPTARG}
+                        ;;
+                esac
+                ;;
+        v)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      FP_BASE=${OPTARG}
+                        ;;
+                esac
+                ;;
+        m)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      MAKE=${OPTARG}
+                        ;;
+                esac
+                ;;
+        t)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      L7_TARGETOS_VARIANT=${OPTARG}
+                        ;;
+                esac
+                ;;
+        l)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      ARCH_LIST=${OPTARG}
+                        ;;
+                esac
+                ;;
+        C)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      SAVED_FILES_LIST="${SAVED_FILES_LIST} ${OPTARG}"
+                        ;;
+                esac
+                ;;
+        k)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      KMODS_LIST+=${OPTARG}
+                        ;;
+                esac
+                ;;
+        o)    case $OPTARG in
+                -? | -* ) usage
+                        ;;
+                *)      OPERATION=${OPTARG}
+                        ;;
+                esac
+                ;;
+        \?)     usage
+                ;;
+        *)      echo "Invalid option!"
+                usage
+                ;;
+        esac
+done
+
+# Source overrides
+if which kernel-cache-vars.sh > /dev/null 2>&1 ; then
+   . kernel-cache-vars.sh
+fi
+
+# Local variables
+#
+if [ -z ${KERNEL_SRC_STORAGE} ]; then
+   KERNEL_SRC_STORAGE=/projects/fastpath-kernel-cache_scratch
+fi
+if [ -z ${SAI_KERNEL_SRC_STORAGE_BINARY} ]; then
+   SAI_KERNEL_SRC_STORAGE_BINARY=/projects/fastpath-binaries-cache/ocp_sai-binaries/kernel-binaries
+fi
+GIT_COMMIT_CACHE=${KERNEL_SRC_STORAGE}/cache
+KERNEL_PACKAGE=${GIT_COMMIT_CACHE}/${GIT_COMMIT_ID}.tgz
+PRIMARY_KERNEL_SRC=${KERNEL_SRC_STORAGE}/${GIT_COMMIT_ID}/${L7_TARGETOS_VARIANT}/${L7_CPU}
+FINGERPRINT_FILE=${KERNEL_SRC_STORAGE}/${GIT_COMMIT_ID}/${L7_TARGETOS_VARIANT}/${L7_CPU}.md5sum
+FALLBACK_KERNEL_SRC_BASE=${FP_BASE}/${OUTPATH}/headers/${GIT_COMMIT_ID}/${L7_TARGETOS_VARIANT}
+FALLBACK_KERNEL_SRC=${FALLBACK_KERNEL_SRC_BASE}/${L7_CPU}
+HOST_NAME=`hostname`
+IDENTIFIER=$$:${USER}:${HOST_NAME}
+URL_RETRY_COUNT=3
+LOCK_HOLD_TIME=7200
+LOCK_RETRY_TIME=10
+LINUX_ID_TAG=$(echo ${GIT_COMMIT_ID} | awk  '{string=substr($0, 1, 8); print string; }' )
+if [ "${FIXED_VERSION}" = "" ]; then
+   LOCALVERSION_STR="LOCALVERSION=\"-${LINUX_ID_TAG}\""
+else
+   LOCALVERSION_STR=
+fi
+L7_GIT_REPO_URL="http://"${L7_GIT_SERVER}"/?p="${L7_GIT_REPO}";a=snapshot;h="${GIT_COMMIT_ID}";sf=tgz"
+
+if [ ! -d ${GIT_COMMIT_CACHE} ] && [ -d ${KERNEL_SRC_STORAGE} ];  then
+   mkdir -p ${GIT_COMMIT_CACHE}
+   chmod 777 ${GIT_COMMIT_CACHE}
+fi
+
+# Ubuntu builds
+ if [ ! -z $(echo ${L7_TARGETOS_VARIANT} | grep -i ubuntu) ]  || [ ! -z $(echo ${L7_TARGETOS_VARIANT} | grep -i debian) ]; then
+
+  KERNEL_SRC_BASE=${OUTPATH}/headers
+  if [ "${OPERATION}" = "clean" ]; then
+    rm -rf ${KERNEL_SRC_BASE}
+  else
+    if [ ! -d ${KERNEL_SRC} ]; then
+
+       # Use environment provided location
+       if [ "${DISTRO_PATH}" != "" ] && [ -d ${DISTRO_PATH} ]; then
+       KERNEL_PKG=${DISTRO_PATH}
+       elif [ "${KERNEL_PKG_SUBPATH}" != "" ]; then
+       # Use cached kernel package
+          KERNEL_PKG=${SAI_KERNEL_SRC_STORAGE_BINARY}/${KERNEL_PKG_SUBPATH}
+       fi
+
+      # Use kernel packages provided in source tree
+      if [ "${KERNEL_PKG}" = "" ]; then
+         if [ -d ${FP_BASE}/bsp/cpu/${L7_CPU}/${L7_TARGETOS_VARIANT} ]; then
+           KERNEL_PKG=${FP_BASE}/bsp/cpu/${L7_CPU}/${L7_TARGETOS_VARIANT}
+           HEADERS_PKGS=$(find ${KERNEL_PKG} -name linux-headers*.deb)" "$(find ${KERNEL_PKG} -name linux-libc-dev*.deb)
+         fi
+
+         # Check common path
+         if [ "${HEADERS_PKGS}" = "" ]; then
+            KERNEL_PKG="${FP_BASE}/bsp/cpu/common/${L7_TARGETOS_VARIANT}/${DISTRO_ARCH}"
+         fi
+      fi
+      # Search for linux-headers debian package in bsp/cpu/L7_CPU folder and if
+      # not found there, look in bsp/cpu/common folder
+      #
+      if [ -d ${KERNEL_PKG} ]; then
+        HEADERS_PKGS=$(find ${KERNEL_PKG} -name linux*.deb)" "$(find ${KERNEL_PKG} -name linux-libc-dev*.deb)
+        SCRIPT_FILES=$(find ${KERNEL_PKG} -name *.sh) 
+      fi
+
+      for file in ${HEADERS_PKGS}
+      do
+        mkdir -p ${KERNEL_SRC_BASE}
+        echo "EBC: Unpack headers from $(basename ${file}) "
+        dpkg -x ${file} ${KERNEL_SRC_BASE}
+      done
+
+      for file in ${SCRIPT_FILES}
+      do
+        mkdir -p ${KERNEL_SRC_BASE}
+        echo "EBC: Copying $(basename ${file}) "
+        cp ${file} ${KERNEL_SRC_BASE}        
+	      echo "EBC: Executing $(basename ${file}) "
+	      ${KERNEL_SRC_BASE}/$(basename ${file})
+      done
+
+    fi
+  fi
+  exit 0
+fi
+
+# Centos builds
+ if [ ! -z $(echo ${L7_TARGETOS_VARIANT} | grep -i centos) ]; then
+
+  HEADERS_DIR=${OUTPATH}/headers
+
+  if [ "${OPERATION}" = "clean" ]; then
+    rm -rf ${HEADERS_DIR}
+  else
+    if [ ! -d ${KERNEL_SRC} ]; then
+      # Common
+      if [ -e  ${FP_BASE}/bsp/cpu/common/${L7_TARGETOS_VARIANT}/${DISTRO_ARCH}/kernel.cfg ]; then
+         . ${FP_BASE}/bsp/cpu/common/${L7_TARGETOS_VARIANT}/${DISTRO_ARCH}/kernel.cfg
+      fi
+
+      # CPU specific override
+      if [ -e  ${FP_BASE}/bsp/cpu/${L7_CPU}/${L7_TARGETOS_VARIANT}/kernel.cfg ]; then
+         . ${FP_BASE}/bsp/cpu/${L7_CPU}/${L7_TARGETOS_VARIANT}/kernel.cfg
+      fi
+
+      # Use environment provided location
+      if [ "${DISTRO_PATH}" != "" ] && [ -d ${DISTRO_PATH} ]; then
+       KERNEL_PKG=${DISTRO_PATH}
+      elif [ "${KERNEL_PKG_SUBPATH}" != "" ]; then
+      # Use cached kernel package
+         KERNEL_PKG=${KERNEL_SRC_STORAGE_BINARY}/${KERNEL_PKG_SUBPATH}
+      fi
+
+      # Use kernel packages provided in source tree
+      if [ "${KERNEL_PKG}" = "" ]; then
+         if [ -d ${FP_BASE}/bsp/cpu/${L7_CPU}/${L7_TARGETOS_VARIANT} ]; then
+           KERNEL_PKG=${FP_BASE}/bsp/cpu/${L7_CPU}/${L7_TARGETOS_VARIANT}
+           HEADERS_PKGS=`find ${KERNEL_PKG} -name kernel-devel-minimal-*.rpm`
+         fi
+
+         # Check common path
+         if [ "${HEADERS_PKGS}" = "" ]; then
+            KERNEL_PKG="${FP_BASE}/bsp/cpu/common/${L7_TARGETOS_VARIANT}/${DISTRO_ARCH}"
+         fi
+      fi
+
+      # Search for kernel-headers redhat package in bsp/cpu/L7_CPU folder and if
+      # not found there, look in bsp/cpu/common folder
+      #
+      if [ -d ${KERNEL_PKG} ]; then
+        HEADERS_PKGS=`find ${KERNEL_PKG} -name kernel-devel-minimal-*.rpm`
+      fi
+
+      for file in ${HEADERS_PKGS}
+      do
+        mkdir -p ${HEADERS_DIR}
+        echo "EBC: Unpack headers from $(basename ${file}) "
+        pushd ${HEADERS_DIR}
+         RPM_VER=$(rpm -q rpm)
+         if [ "$(printf "rpm-4.6\n$RPM_VER" | sort -V | head -n 1)" = "$RPM_VER" ]; then
+            rpm2cpio ${file}  | xzcat -t > /dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                rpm2cpio ${file} | cpio -id
+            else
+                rpm2cpio ${file} | xzcat  | cpio -id
+            fi
+         else
+            rpm2cpio ${file} | cpio -id
+         fi
+        popd
+      done
+    fi
+  fi
+fi
+
+
+# Exception handler
+#
+cleanup() {
+   
+   PRINT "EBC: Interrupted"
+   
+   if [ -d ${KERNEL_PACKAGE}.lock ]; then
+      OWNER=`cat ${KERNEL_PACKAGE}.lock/owner`
+      if [ ${OWNER}=${IDENTIFIER} ]; then
+         rm -rf ${KERNEL_PACKAGE}
+         rm -rf ${KERNEL_PACKAGE}.lock
+      fi
+   fi
+   
+   if [ -d ${PRIMARY_KERNEL_SRC}.lock ]; then
+      OWNER=`cat ${PRIMARY_KERNEL_SRC}.lock/owner`
+      if [ ${OWNER}=${IDENTIFIER} ]; then
+         rm -rf ${PRIMARY_KERNEL_SRC}
+         rm -rf ${PRIMARY_KERNEL_SRC}.lock
+      fi
+   fi
+ 
+   exit 4
+   
+}
+
+# Execute function cleanup() upon receiving INT TERM signal
+#
+trap 'cleanup'  INT TERM
+
+# Debug print function
+#
+DEBUG() {
+
+  # print to console only when dmode=v is specified
+  if [ -z ${DBG} ]; then
+    echo $1
+  fi
+
+}
+
+# print function
+#
+PRINT() {
+
+  # Always print to console 
+  echo $1
+
+}
+
+# Verify finger print
+# Input: <primary path> <fingerprint file>
+#
+check_fingerprint () {
+   # Check if a kernel is build
+   if [ ! -s ${1}/vmlinux ]; then
+      return 1;
+   fi
+   if [ ! -z "${ZIMAGE_APPEND_DTB}" -a ! -s ${1}/zImage ]; then
+      return 1;
+   fi
+
+   # Disabling code to verify finger print because some
+   # servers are returning different values
+   return 0;
+
+   # Verify fingerprint
+   #if [ ! -e ${2} ]; then
+      # finger print file was deleted, remove corresponding kernel headers
+   #   DEBUG "EBC: Fingerprint of Kernel and Headers found in ${1} is missing."
+   #   rm -f ${FALLBACK_KERNEL_SRC}
+   #else
+      # Check if finger print matches
+   #   FINGERPRINT_READ=`cat ${2}`
+   #   FINGERPRINT_CALCULATED=`tar c -C ${1} . | md5sum -b `
+   #   if [ "${FINGERPRINT_READ}" != "${FINGERPRINT_CALCULATED}" ]; then
+   #       DEBUG "EBC: Kernel and Headers found in ${1} are corrupted."
+   #       DEBUG "EBC: Expected ${FINGERPRINT_READ}, calculated ${FINGERPRINT_CALCULATED}."
+   #       rm -f ${FALLBACK_KERNEL_SRC}
+   #   else
+   #      return 0;
+   #   fi
+   #fi
+   #return 1
+}
+
+# Check if a lock has expired
+# Input: <lockname> <expiry time in seconds>
+#
+is_lock_stale() {
+   
+   LOCK_FILE=$1
+   LOCK_TIME_IN_SEC=$2
+   LOCK_TIMESTAMP=`cat ${LOCK_FILE}/timestamp`
+   if [ $? -ne 0 ]; then
+      return 0
+   fi
+   NOW=`date '+%s'`
+   
+   if [  $((${NOW} - ${LOCK_TIMESTAMP})) -gt ${LOCK_TIME_IN_SEC} ]; then
+       PRINT "EBC: Stale lock detected, current time ${NOW} lock creation time ${LOCK_TIMESTAMP}"
+      return 1
+   else
+      return 0
+   fi
+   
+}
+
+# Blocking call to take a lock
+# Input: <file or directory name> <expiry time in seconds>
+#
+take_lock() {
+   
+   FILE_NAME=$1
+   EXPIRY_INTERVAL=$2
+   while :
+   do
+     mkdir ${FILE_NAME}.lock
+     if [ $? -ne 0 ]; then
+        PRINT "Waiting for lock ${FILE_NAME}.lock"
+        is_lock_stale ${FILE_NAME}.lock ${EXPIRY_INTERVAL} 
+        if [ $? -eq 1 ]; then
+           PRINT "Deleting stale lock ${FILE_NAME}.lock"
+           rm -rf ${FILE_NAME}
+           rm -rf ${FILE_NAME}.lock
+        else
+           sleep ${LOCK_RETRY_TIME}
+        fi
+     else
+       break
+     fi
+   done
+
+   #Time stamp for lock creation
+   CURR_TIME=`date '+%s'`
+   echo ${CURR_TIME} > ${FILE_NAME}.lock/timestamp
+   echo ${IDENTIFIER} > ${FILE_NAME}.lock/owner
+   
+}
+
+# Release a lock
+# Input: <file or directory name>
+#
+release_lock() {
+   
+   OWNER=`cat ${1}.lock/owner`
+   if [ $? -eq 0 ]; then
+      if [ ${OWNER} = ${IDENTIFIER} ]; then
+         rm -rf ${1}.lock
+      fi
+   fi
+   
+}
+
+# Kernel Download logic
+#
+download_kernel() {
+   
+   take_lock ${KERNEL_PACKAGE} ${LOCK_HOLD_TIME}
+   # Check cache if kernel bundle already exists
+   if [ ! -s ${KERNEL_PACKAGE} ]; then
+      DL_RV=1
+      c=1
+      while [ $c -le ${URL_RETRY_COUNT} ]
+      do
+         PRINT "EBC(download): Kernel package ${GIT_COMMIT_ID} not found in ${GIT_COMMIT_CACHE}. Downloading from GIT server.. (Attempt $c)"
+         # Download kernel from GIT server
+         if [ $(type -t get_kernel) == function ] ; then
+            get_kernel ${L7_GIT_REPO} ${GIT_COMMIT_ID} ${KERNEL_PACKAGE}
+         else
+            wget ${L7_GIT_REPO_URL} -O ${KERNEL_PACKAGE}
+         fi
+         if [ $? -eq 0 ]; then
+            DL_RV=$?
+            break
+         fi
+         c=$((c=c+1))
+      done
+      
+      if [ $? -ne 0 ] || [ ${DL_RV} -ne 0 ]; then
+         PRINT "EBC(download): Failed to download kernel from ${L7_GIT_REPO_URL}"
+         rm -f ${KERNEL_PACKAGE}
+         release_lock ${KERNEL_PACKAGE}
+         exit 1
+      fi
+   fi
+   release_lock ${KERNEL_PACKAGE}
+   
+}
+
+# Kernel Extraction  logic
+#
+extract_kernel() {
+   
+   PRINT "EBC(extract): Unpacking ${KERNEL_PACKAGE}"
+   if [ -s ${KERNEL_PACKAGE} ]; then
+      rm -rf ${FALLBACK_KERNEL_SRC}
+      mkdir -p ${FALLBACK_KERNEL_SRC}
+      tar -xf ${KERNEL_PACKAGE} -C ${FALLBACK_KERNEL_SRC} --strip 1
+      if [ $? -ne 0 ]; then
+         PRINT "EBC(extract): Kernel unpack failed"
+         release_lock ${PRIMARY_KERNEL_SRC}
+         exit 2
+      fi
+   else
+      PRINT "EBC(extract): Kernel package ${GIT_COMMIT_ID} not found in ${GIT_COMMIT_CACHE}"
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 2
+   fi
+   
+}
+
+# Build cuImage if the platform demands
+#
+build_kernel_cuimage()
+{
+   if [ "${L7_CPU}" != "cord8541" ] ; then
+	return;
+   fi
+
+   PRINT "EBC(build): Building cuImage Kernel for ${L7_CPU}"
+   ${MAKE} ARCH=${L7_CPU_ARCH} CROSS_COMPILE=${CROSS_COMPILE} ${LOCALVERSION_STR} cuImage.${L7_CPU}
+
+   if [ ! -s ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/boot/cuImage.${L7_CPU} ]; then
+      PRINT "EBC(build): cuImage Kernel build for ${L7_CPU}, configuration ${L7_LINUX_CONFIG_FILE} failed"
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 7
+   fi
+
+   mkdir -p ${PRIMARY_KERNEL_SRC}
+
+   # Always last
+   cp -f ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/boot/cuImage.${L7_CPU}.elf ${PRIMARY_KERNEL_SRC}/
+   if [ $? -ne 0 ]; then
+      PRINT "EBC(publish): Copy from ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/boot/cuImage.${L7_CPU}.elf to  ${PRIMARY_KERNEL_SRC} failed"
+      rm -rf ${PRIMARY_KERNEL_SRC}
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 8
+   fi
+}
+
+
+# Copy kernel objects if the platform demands
+#
+copy_kernel_modules()
+{
+   if [ "${L7_CPU}" != "ipgs7xxtx" ] ; then
+	return;
+   fi
+
+   PRINT "EBC(build): Building kernel objects for ${L7_CPU}"
+   ${MAKE} ARCH=${L7_CPU_ARCH} CROSS_COMPILE=${CROSS_COMPILE} ${LOCALVERSION_STR} modules 
+
+   if [ ! -s ${FALLBACK_KERNEL_SRC}/drivers/usb/host/max3421-hcd.ko ]; then
+      PRINT "EBC(build): Building kernel objects for ${L7_CPU}, configuration ${L7_LINUX_CONFIG_FILE} failed"
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 7
+   fi
+
+   if [ ! -s ${FALLBACK_KERNEL_SRC}/drivers/bcmdrivers/mspi/iproc_mspi.ko ]; then
+      PRINT "EBC(build): Building kernel objects for ${L7_CPU}, configuration ${L7_LINUX_CONFIG_FILE} failed"
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 7
+   fi
+
+   mkdir -p ${PRIMARY_KERNEL_SRC}
+
+   # Always last
+   cp -f ${FALLBACK_KERNEL_SRC}/drivers/usb/host/max3421-hcd.ko ${PRIMARY_KERNEL_SRC}/
+   if [ $? -ne 0 ]; then
+      PRINT "EBC(publish): Copy from ${FALLBACK_KERNEL_SRC}/drivers/bcmdrivers/mspi/iproc_mspi.ko to  ${PRIMARY_KERNEL_SRC} failed"
+      rm -rf ${PRIMARY_KERNEL_SRC}
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 8
+   fi
+
+   cp -f ${FALLBACK_KERNEL_SRC}/drivers/bcmdrivers/mspi/iproc_mspi.ko ${PRIMARY_KERNEL_SRC}/
+   if [ $? -ne 0 ]; then
+      PRINT "EBC(publish): Copy from ${FALLBACK_KERNEL_SRC}/drivers/bcmdrivers/mspi/iproc_mspi.ko to  ${PRIMARY_KERNEL_SRC} failed"
+      rm -rf ${PRIMARY_KERNEL_SRC}
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 8
+   fi
+}
+
+# Kernel Build  logic
+#
+build_kernel() {
+   
+   PRINT "EBC(build): Building Kernel for ${L7_CPU_ARCH}, configuration ${L7_LINUX_CONFIG_FILE}"
+   cd ${FALLBACK_KERNEL_SRC}
+   ${MAKE} ARCH=${L7_CPU_ARCH} CROSS_COMPILE=${CROSS_COMPILE} mrproper
+   ${MAKE} ARCH=${L7_CPU_ARCH} CROSS_COMPILE=${CROSS_COMPILE} ${LOCALVERSION_STR} ${L7_LINUX_CONFIG_FILE}
+   if [ $? -ne 0 ]; then
+      PRINT "EBC(build): Kernel build for ${L7_CPU_ARCH}, configuration ${L7_LINUX_CONFIG_FILE} is invalid"
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 3
+   fi
+   ${MAKE} ARCH=${L7_CPU_ARCH} CROSS_COMPILE=${CROSS_COMPILE} ${LOCALVERSION_STR}
+   build_kernel_cuimage
+
+   copy_kernel_modules
+   
+   if [ ! -s ${FALLBACK_KERNEL_SRC}/vmlinux ]; then
+      PRINT "EBC(build): Kernel build for ${L7_CPU_ARCH}, configuration ${L7_LINUX_CONFIG_FILE} failed"
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 3
+   fi
+   if [ ! -z "${ZIMAGE_APPEND_DTB}" -a ! -s ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/boot/zImage ]; then
+      PRINT "EBC(build): Kernel build for ${L7_CPU_ARCH}, configuration ${L7_LINUX_CONFIG_FILE} failed, zImage missing"
+      release_lock ${PRIMARY_KERNEL_SRC}
+      exit 3
+   fi
+   
+}
+
+# Kernel clean  logic
+#
+clean_kernel() {
+    
+   PRINT "EBC(clean): Clean kernel sources"
+   cd ${FALLBACK_KERNEL_SRC}
+
+   # Take backup of kernel modules which are needed.
+   mkdir kmods
+   for file in ${KMODS_LIST}
+   do
+      MODULE=`basename ${file} .ko`
+      cp -f ${file} ${FALLBACK_KERNEL_SRC}/kmods/${MODULE}.bk
+   done
+
+   # Take backup of files which are needed but are cleaned by make clean operation.
+   for file in ${SAVED_FILES_LIST} vmlinux
+   do
+      cp -f ${file} ${file}.bak
+   done
+   if [ ! -z "${ZIMAGE_APPEND_DTB}" ]; then
+      cp -f arch/${L7_CPU_ARCH}/boot/zImage zImage.bak
+   fi
+
+   ${MAKE} ARCH=${L7_CPU_ARCH} CROSS_COMPILE=${CROSS_COMPILE} clean
+
+   # Restore backup files which are needed for linking modules.
+   for file in ${SAVED_FILES_LIST} vmlinux
+   do
+      mv ${file}.bak ${file}
+   done
+   if [ ! -z "${ZIMAGE_APPEND_DTB}" ]; then
+      mv -f zImage.bak ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/boot/zImage
+   fi
+
+   # Restore backed up kernel modules which are needed.
+   for file in ${KMODS_LIST}
+   do
+      MODULE=`basename ${file} .ko`
+      MODULE_DIR=`dirname ${file}`
+      mkdir -p ${FALLBACK_KERNEL_SRC}/${MODULE_DIR}
+      mv ${FALLBACK_KERNEL_SRC}/kmods/${MODULE}.bk ${FALLBACK_KERNEL_SRC}/${file}
+   done
+   
+}
+
+# Kernel binary and header publishing logic
+#
+publish_kernel() {
+   
+   # Check if Primary Path already exists
+   if [ ! -s ${PRIMARY_KERNEL_SRC}/vmlinux ]; then
+      DEBUG "EBC(publish): kernel and headers not found at ${PRIMARY_KERNEL_SRC}"
+      DEBUG "EBC(publish): Copying from local path ${FALLBACK_KERNEL_SRC}"
+      mkdir -p ${PRIMARY_KERNEL_SRC}
+ 
+      ## File selection logic start
+      cp  -f ${FALLBACK_KERNEL_SRC}/Makefile        ${PRIMARY_KERNEL_SRC}/
+      cp  -f ${FALLBACK_KERNEL_SRC}/Module.symvers  ${PRIMARY_KERNEL_SRC}/
+      cp -Rf ${FALLBACK_KERNEL_SRC}/include         ${PRIMARY_KERNEL_SRC}/
+      cp -Rf ${FALLBACK_KERNEL_SRC}/scripts         ${PRIMARY_KERNEL_SRC}/
+      
+      mkdir -p ${PRIMARY_KERNEL_SRC}/arch/${L7_CPU_ARCH}
+      if [ "${ARCH_LIST}" = "*" ]; then
+        cp -Rf ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/* ${PRIMARY_KERNEL_SRC}/arch/${L7_CPU_ARCH}
+        if [ "${L7_CPU_ARCH}" == "arm64" ]; then
+            mkdir -p ${PRIMARY_KERNEL_SRC}/arch/arm
+            cp -Rf ${FALLBACK_KERNEL_SRC}/arch/arm/* ${PRIMARY_KERNEL_SRC}/arch/arm
+        fi
+      else
+        cp -f    ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/Makefile ${PRIMARY_KERNEL_SRC}/arch/${L7_CPU_ARCH}
+        cp -Rf   ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/include  ${PRIMARY_KERNEL_SRC}/arch/${L7_CPU_ARCH}
+
+        for folder in ${ARCH_LIST}
+        do
+           mkdir -p ${PRIMARY_KERNEL_SRC}/arch/${L7_CPU_ARCH}/${folder}
+           cp -Rf   ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/${folder}/* ${PRIMARY_KERNEL_SRC}/arch/${L7_CPU_ARCH}/${folder}
+        done
+      fi
+
+      # Copy files that are marked needed.
+      for file in ${SAVED_FILES_LIST} ${KMODS_LIST}
+      do
+        FILE_DIR=`dirname ${file}`
+        mkdir -p  ${PRIMARY_KERNEL_SRC}/${FILE_DIR}
+        cp -Rf ${FALLBACK_KERNEL_SRC}/${file} ${PRIMARY_KERNEL_SRC}/${file}
+      done
+     
+      # Always last
+      cp  -f   ${FALLBACK_KERNEL_SRC}/vmlinux                      ${PRIMARY_KERNEL_SRC}/
+      if [ $? -eq 0 -a ! -z "${ZIMAGE_APPEND_DTB}" ]; then
+        cp  -f ${FALLBACK_KERNEL_SRC}/arch/${L7_CPU_ARCH}/boot/zImage ${PRIMARY_KERNEL_SRC}/
+      fi
+
+      ## File selection logic end
+      if [ $? -ne 0 ]; then
+         PRINT "EBC(publish): Copy from ${FALLBACK_KERNEL_SRC}/vmlinux to  ${PRIMARY_KERNEL_SRC} failed"
+         rm -rf ${PRIMARY_KERNEL_SRC}
+         rm -rf ${FALLBACK_KERNEL_SRC}
+         release_lock ${PRIMARY_KERNEL_SRC}
+         exit 5
+      fi
+      chmod -R ugo+rw ${PRIMARY_KERNEL_SRC}
+      # Create finger print
+      tar c -C ${PRIMARY_KERNEL_SRC} . | md5sum -b > ${FINGERPRINT_FILE}
+      PRINT "EBC(publish): Kernel and Headers published to ${PRIMARY_KERNEL_SRC}"
+   else
+      PRINT "EBC(publish): Kernel and Headers found in ${PRIMARY_KERNEL_SRC}. Skipping publish process."
+   fi
+   
+}
+
+# Link Fallback Path to Primary Path
+#
+construct_fallback() {
+   
+   if [ -s ${PRIMARY_KERNEL_SRC}/vmlinux ]; then
+      # Check if existing Fallback Path points to Primary Path
+      if [ -s  ${FALLBACK_KERNEL_SRC} ]; then
+         TARGET_LINK=`readlink -s ${FALLBACK_KERNEL_SRC}`
+         if [ $? -eq 0 ] && [ ${TARGET_LINK} = ${PRIMARY_KERNEL_SRC} ]; then
+            exit 0
+         fi
+      fi
+
+      # Link Fallback Path points to Primary Path
+      PRINT "EBC: Link ${FALLBACK_KERNEL_SRC} to ${PRIMARY_KERNEL_SRC}"
+      rm  -rf ${FALLBACK_KERNEL_SRC}
+      mkdir -p ${FALLBACK_KERNEL_SRC_BASE}
+      ln -s ${PRIMARY_KERNEL_SRC} ${FALLBACK_KERNEL_SRC}
+      if [ $? -ne 0 ]; then
+         PRINT "EBC: Failed to link ${FALLBACK_KERNEL_SRC} to ${PRIMARY_KERNEL_SRC}"
+         exit 5
+      fi
+   fi
+   
+}
+
+# Extract kernel sources to Fallback Path and do nothing
+#
+if [ "${OPERATION}" = "extract" ]; then
+   # Check for builds requesting EBC. Bail out if not.
+   if [ "${KERNEL_SRC}" != "${FALLBACK_KERNEL_SRC}" ] && [ "${KERNEL_SRC}" != "auto" ]; then
+      exit 0
+   fi
+   download_kernel
+   extract_kernel
+   exit 0
+fi
+
+
+# Clean make generated targets
+#
+if [ "${OPERATION}" = "clean" ]; then
+   # Check for builds requesting EBC. Bail out if not.
+   if [ "${KERNEL_SRC}" != "${FALLBACK_KERNEL_SRC}" ] && [ "${KERNEL_SRC}" != "auto" ]; then
+      exit 0
+   fi
+
+   if [ -d ${KERNEL_SRC_STORAGE} ] && [ -d ${FALLBACK_KERNEL_SRC_BASE} ] ; then
+      DEBUG "Removing ${FALLBACK_KERNEL_SRC}" 
+      rm -rf ${FALLBACK_KERNEL_SRC}
+      EMTPY=`find ${FALLBACK_KERNEL_SRC_BASE} -maxdepth 1 -type d -empty`
+      if [ ! -z ${EMTPY} ]; then
+        DEBUG "Removing ${FALLBACK_KERNEL_SRC_BASE}" 
+        rm -rf ${FALLBACK_KERNEL_SRC_BASE}
+      fi
+   else
+      if [ -d ${FALLBACK_KERNEL_SRC} ]; then
+         # For source code packages, make clean kernel sources directory
+         cd ${FALLBACK_KERNEL_SRC}
+         ${MAKE} ARCH=${L7_CPU_ARCH} CROSS_COMPILE=${CROSS_COMPILE} mrproper
+      fi
+   fi
+   exit 0
+fi
+
+
+# Check for builds requesting EBC if KERNEL_SRC points to Fallback Path
+# If not, use predfined KERNEL_SRC
+#
+if [ "${KERNEL_SRC}" != "${FALLBACK_KERNEL_SRC}" -a -d ${KERNEL_SRC} ]; then
+   DEBUG "EBC: Using defined Kernel and Headers found in ${KERNEL_SRC} fallback ${FALLBACK_KERNEL_SRC}"
+   exit 0
+fi
+
+# Check if a valid Primary Path for Kernel and Headers already exist
+#
+check_fingerprint ${PRIMARY_KERNEL_SRC}  ${FINGERPRINT_FILE}
+if [ $? -ne 0 ]; then
+   # While compiling FASTPATH source code packages in standalone mode, Primary Path may not be accessible.
+   if [ ! -s ${FALLBACK_KERNEL_SRC}/vmlinux ]; then
+      # Check if Fallback Path has kernel sources provided and if we are in a standalone environment. 
+      # If kernel sources found compile kernel in Fallback path
+      if [ -s ${FALLBACK_KERNEL_SRC}/Makefile ] && [ ! -d ${KERNEL_SRC_STORAGE} ]; then
+         build_kernel
+
+         clean_kernel
+         DEBUG "EBC: Kernel and Headers found in ${FALLBACK_KERNEL_SRC}"
+         exit 0
+      else
+         # Perform entire EBC process
+         download_kernel
+         # Create a directory for new commit-id
+         mkdir -p ${KERNEL_SRC_STORAGE}/${GIT_COMMIT_ID}/${L7_TARGETOS_VARIANT}
+         chmod 777 ${KERNEL_SRC_STORAGE}/${GIT_COMMIT_ID}
+         chmod 777 ${KERNEL_SRC_STORAGE}/${GIT_COMMIT_ID}/${L7_TARGETOS_VARIANT}
+         take_lock ${PRIMARY_KERNEL_SRC} ${LOCK_HOLD_TIME}
+         # Verify finger print once more as a parallel build process might have re-created 
+         # valid kernel and headers while we were waiting for lock
+         check_fingerprint ${PRIMARY_KERNEL_SRC}  ${FINGERPRINT_FILE}
+         if [ $? -ne 0 ]; then
+            # Remove existing primary path and fingerprint
+            rm -rf ${PRIMARY_KERNEL_SRC} ${FINGERPRINT_FILE}
+            extract_kernel
+         
+            build_kernel
+           
+            clean_kernel
+         
+            publish_kernel
+         fi
+         release_lock ${PRIMARY_KERNEL_SRC}
+     fi
+   else
+      DEBUG "EBC: Kernel and Headers found in ${FALLBACK_KERNEL_SRC}"
+      exit 0
+   fi
+else
+   DEBUG "EBC: Kernel and Headers found in ${PRIMARY_KERNEL_SRC}"
+fi
+# Fallback Path always points to Primary Path
+construct_fallback
+exit 0

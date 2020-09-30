@@ -1,0 +1,58 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          load-libsaibcm-modules
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load libsaibcm kernel modules
+### END INIT INFO
+
+case "$1" in
+start)
+	echo -n "Load libsaibcm kernel modules... "
+
+        mknod /dev/linux-knet-cb    c 121 0
+        mknod /dev/linux-bcm-knet   c 122 0
+        mknod /dev/linux-user-bde   c 126 0
+        mknod /dev/linux-kernel-bde c 127 0
+
+        modprobe linux-kernel-bde dmasize=32M maxpayload=128
+        modprobe linux-user-bde
+        modprobe linux-bcm-knet use_rx_skb=1
+        modprobe linux-knet-cb
+
+	echo "done."
+	;;
+
+stop)
+	echo -n "Unload libsaibcm kernel modules... "
+
+        rmmod linux-knet-cb
+        rmmod linux-bcm-knet
+        rmmod linux-user-bde
+        rmmod linux-kernel-bde
+
+        rm -f /dev/linux-knet-cb
+        rm -f /dev/linux-bcm-knet
+        rm -f /dev/linux-user-bde
+        rm -f /dev/linux-kernel-bde
+
+	echo "done."
+	;;
+
+force-reload|restart)
+	echo "Not supported"
+	;;
+
+*)
+	echo "Usage: /etc/init.d/libsaibcm-modules-3.16.0-amd64 {start|stop}"
+	exit 1
+	;;
+esac
+
+exit 0
+

@@ -1,0 +1,76 @@
+diff -rupN original/include/kcom.h new/include/kcom.h
+--- original/include/kcom.h	2018-03-30 12:39:04.000000000 +0530
++++ new/include/kcom.h	2018-04-24 14:13:29.108371000 +0530
+@@ -461,7 +461,8 @@ typedef struct kcom_msg_filter_destroy_s
+  * Get list of currently defined packet filters.
+  */
+ #ifndef KCOM_FILTER_MAX
+-#define KCOM_FILTER_MAX         128
++/* SAI_FIXUP - Increased the filters to 1024 from 128 */
++#define KCOM_FILTER_MAX          1024
+ #endif
+ 
+ typedef struct kcom_msg_filter_list_s {
+diff -rupN original/systems/linux/user/common/Makefile new/systems/linux/user/common/Makefile
+--- original/systems/linux/user/common/Makefile	2018-03-30 12:39:05.000000000 +0530
++++ new/systems/linux/user/common/Makefile	2018-04-24 14:13:29.113344000 +0530
+@@ -130,6 +130,9 @@ ADD_TO_CFLAGS += -I$(SDK)/systems/linux/
+ COND_KNET_LIBS = libuser.$(libext)
+ endif
+ 
++#SAI_FIXUP
++.NOTPARALLEL:
++
+ all: $(BLDDIR)/.tree $(all_targets)
+ 
+ ifeq ($(NO_LOCAL_TARGETS),)
+@@ -149,6 +149,9 @@ ADD_TO_CFLAGS += -I$(SDK)/systems/bde/li
+ ADD_TO_CFLAGS += -DPROXY_SUPPORT=0
+ 
+ CFLAGS += $(ADD_TO_CFLAGS)
++#SAI_FIXUP
++CFLAGS:=$(filter-out -fPIC, $(CFLAGS))
++
+ 
+ kernel_modules:
+ 	$(MAKE) -C $(SDK)/systems/bde/linux/kernel kernel_version=$(kernel_version)
+@@ -151,10 +154,10 @@ kernel_modules:
+ 	$(MAKE) -C $(SDK)/systems/bde/linux/kernel kernel_version=$(kernel_version)
+ 	$(MAKE) -C $(SDK)/systems/bde/linux/user/kernel kernel_version=$(kernel_version)
+ ifeq ($(BUILD_KNET),1)
+-	$(MAKE) -C $(SDK)/systems/linux/kernel/modules kernel_version=$(kernel_version) \
++	$(MAKE) -j1 -C $(SDK)/systems/linux/kernel/modules kernel_version=$(kernel_version) \
+ 		subdirs="shared bcm-knet" override-target=linux-$(platform) CFLAGS="$(CFLAGS)"
+ ifdef BUILD_KNET_CB
+-	$(MAKE) -C $(SDK)/systems/linux/kernel/modules kernel_version=$(kernel_version) \
++	$(MAKE) -j1 -C $(SDK)/systems/linux/kernel/modules kernel_version=$(kernel_version) \
+ 		subdirs="knet-cb" override-target=linux-$(platform) CFLAGS="$(CFLAGS)"
+ endif
+ endif
+
+diff -rupN output/x86-xgs5-deb80/sdk-6.5.13-gpl-modules/systems/linux/kernel/modules/bcm-knet/bcm-knet.c bcm-knet.c
+--- original/systems/linux/kernel/modules/bcm-knet/bcm-knet.c 2018-03-30 03:09:05.000000000 -0400
++++ new/systems/linux/kernel/modules/bcm-knet/bcm-knet.c 2018-09-27 14:02:13.852129000 -0400
+@@ -4417,7 +4417,8 @@ bkn_tx(struct sk_buff *skb, struct net_d
+             }
+         } else {
+             if (sinfo->cmic_type == 'x' && priv->port >= 0) {
+-                if (skb_header_cloned(skb) || skb_headroom(skb) < hdrlen + 4) {
++                if (skb_header_cloned(skb) || skb_headroom(skb) < hdrlen + 4 ||
++                    ((unsigned long)skb->data % 4)) {
+                     /* Current SKB cannot be modified */
+                     DBG_SKB(("Realloc Tx SKB\n"));
+                     new_skb = dev_alloc_skb(pktlen + hdrlen + 4);
+@@ -4784,6 +4785,9 @@ bkn_tx(struct sk_buff *skb, struct net_d
+         bkn_suspend_tx(sinfo);
+     }
+
++#if (LINUX_VERSION_CODE <= KERNEL_VERSION(4,6,0))                  
+     dev->trans_start = jiffies;
+-
++#else
++    netif_trans_update(dev);
++#endif
+     spin_unlock_irqrestore(&sinfo->lock, flags);
+
+     return 0;

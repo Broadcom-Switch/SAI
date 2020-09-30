@@ -1,0 +1,324 @@
+saibcm (3.3.6.2) stable; urgency=medium
+
+  * 20190726 (6554ac0f0d348524061ab4fc5cd5f9be2243374e)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 26 Jul 2019 15:42:47 -0400
+
+saibcm (3.3.6.1) stable; urgency=medium
+
+  * 20190513 (f8bdcc9e60615e4413f82178a77b1c962a7a7992)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Mon, 13 May 2019 15:42:47 -0400
+
+saibcm (3.3.5.5) stable; urgency=medium
+
+  * 20190414 (bc244c0f6ea1c5cb7684a1847685fccc9b91cdb2)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Sun, 14 Apr 2019 15:42:47 -0400
+
+saibcm (3.3.5.4) stable; urgency=medium
+
+  * 20190402 (3e6938f71a4f3e82cbd056eb771144f9bd813fd3)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Tue, 02 Apr 2019 15:42:47 -0400
+
+saibcm (3.3.5.3) stable; urgency=medium
+
+  * 20190401 (2b2a5f2648e92b1b9bc2562bf9111f2b69ff65bd)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Mon, 01 Apr 2019 15:42:47 -0400
+
+saibcm (3.3.5.2) stable; urgency=medium
+
+  * 20190329 (5dd76b2416bfd7416a5448df7a993154792eb3fa)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 29 Mar 2019 15:42:47 -0400
+
+saibcm (3.3.5.1) stable; urgency=medium
+
+  * 20190321 (d971052544e1e32f69640ada3e8afbc40093ec9f)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Thu, 21 Mar 2019 15:42:47 -0400
+
+saibcm (3.3.4.3) stable; urgency=medium
+
+  * 20190118 (5e46617f63d4efc70b0b7fe67570f417866cbf26)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 18 Jan 2019 15:42:47 -0400
+
+saibcm (3.3.4.2) stable; urgency=medium
+
+  * 20190115 (2b9417997b6aac116ce35301f02ea502b6bef329)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Tue, 15 Jan 2019 15:42:47 -0400
+
+saibcm (3.3.4.1) stable; urgency=medium
+
+  * 20190108 (5d9370f5ed12169c399a6d69f7497226a06ed722)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Tue, 08 Jan 2019 15:42:47 -0400
+
+saibcm (3.3.3.4) unstable; urgency=medium
+
+  * 20181218 (d74177b50251c18a25416e19a2acf450aa7c3f17)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Tue, 18 Dec 2018 15:42:47 -0400
+
+saibcm (3.3.3.3) unstable; urgency=medium
+
+  * 20181214 (98e9d115069b88a10fd2bda3b1ec04277b123f5a)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 14 Dec 2018 15:42:47 -0400
+
+saibcm (3.3.3.2) unstable; urgency=medium
+
+  * 20181207 (0615c5542e473ddcc3a635f3adf0ef9fd456e0e0)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 07 Dec 2018 15:42:47 -0400
+
+saibcm (3.3.3.1) unstable; urgency=medium
+
+  * 20181130 (4387a5775b442e7475d308f2595584100ab8bff0)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 30 Nov 2018 15:42:47 -0400
+
+saibcm (3.3.3.1) unstable; urgency=medium
+
+  * 20181130 (7fa727bf73ce5d14051e18b5ab1288f71daab037)
+    3.3 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 30 Nov 2018 15:42:47 -0400
+
+saibcm (3.3.2.4) unstable; urgency=medium
+
+  * 20180830 (f9550f3b10760022e2fc58950928bd7284de306e)
+    3.3 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Thu, 30 Aug 2018 15:42:47 -0400
+
+saibcm (3.3.2.3) unstable; urgency=medium
+
+  * 20180824 (e366ae2a447b3e164c01c501df1d46fd15f39b40)
+    3.3 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 24 Aug 2018 15:42:47 -0400
+
+saibcm (3.3.2.2) unstable; urgency=medium
+
+  * 20180816 (773481344de15bf23eab10056491b4090a0ace24)
+    3.3 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Thu, 16 Aug 2018 15:42:47 -0400
+
+saibcm (3.3.2.2) unstable; urgency=medium
+
+  * 20180815 (85842059de852ce4ac4844faab989d194b8217a5)
+    3.3 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Wed, 15 Aug 2018 15:42:47 -0400
+
+saibcm (3.3.2.1) unstable; urgency=medium
+
+  * 20180806 (7bfacfe18f907d3f229d7089ea1981f1bf1cc1fc)
+    3.3 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Mon, 6 Aug 2018 15:42:47 -0400
+
+saibcm (3.3.1.1) unstable; urgency=medium
+
+  * 20180716 (2505fcedf45591b21b5fefce671624bee48db639)
+    3.3 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Mon, 16 Jul 2018 15:42:47 -0400
+saibcm (3.3.0.1) unstable; urgency=medium
+
+  * 20180702 (872d076c90826a32f76986aa9e673b7c333dc9c3)
+    3.3 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Mon, 2 Jul 2018 15:42:47 -0400
+saibcm (3.2.1.3) unstable; urgency=medium
+
+  * 20180618 (bec5720ed578f7cf1572f1dcb1ba52a89ee0f09c)
+    3.2 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Mon, 18 Jun 2018 15:42:47 -0400
+saibcm (3.2.1.2) unstable; urgency=medium
+
+  * 20180516 (4045aa9cef2b4e0bf62e3bc99d7d75540015e776)
+    3.2 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Wed, 16 May 2018 15:42:47 -0400
+saibcm (3.2.1.1) unstable; urgency=medium
+
+  * 20180427 (d2828462af409d568e606e7ad4c3cae388da5e9a)
+    3.2 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 27 Apr 2018 15:42:47 -0400
+
+saibcm (3.2.0.1) unstable; urgency=medium
+
+  * 20180323 (28db3f2fc6eacdd1ffc4f708bb867ecd22a66f08)
+    3.2 EA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 23 Mar 2018	15:42:47 -0400
+
+saibcm (3.1.3.3) unstable; urgency=medium
+
+  * 20180122 (29fad0d9839721c1c690953599a2c2b7ef75bc7c)
+    3.1 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Mon, 22 Jan 2018	16:05:47 -0400
+
+saibcm (3.1.2.1) unstable; urgency=medium
+
+  * 20180105 (619d5bb30e071b5551ca9d6850f788eeb9331cf3)
+    3.1 GA Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 05 Jan 2018 16:05:47 -0400
+
+saibcm (3.1.1.3) unstable; urgency=medium
+
+  * 20171220 (7c74c7b6a65e3dba7fe1041b5230d3c3f868f876)
+    3.1 EA1 Release
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Mon, 18 Dec 2017 16:05:47 -0400
+
+saibcm (3.1.0.1) unstable; urgency=medium
+
+  * 20171020 (7c74c7b6a65e3dba7fe1041b5230d3c3f868f876)
+    3.1 EA0 Release - Add support for TH2.
+
+ -- greg.mirek@broadcom.com <greg.mirek@broadcom.com>  Fri, 20 Oct 2017 16:05:47 -0400
+
+saibcm (3.0.3.3) unstable; urgency=medium
+
+  * 20171009 (a2e162220bdd1a045e765c26dcdd2e4bdd795d04)
+    Fixes for AliBaba CSPs CS3477948, CS3504614, CS3517127, CS3724008.
+
+ -- tusharty.tyagi@broadcom.com <tusharty.tyagi@broadcom.com>  Mon, 09 Oct 2017 17:11:54 -0400
+
+saibcm (3.0.3.2) unstable; urgency=medium
+
+  * 20170906 (490197b0058e306635ca6c6e2011a15508d3a953)
+    Add libpthread.
+
+ -- tusharty.tyagi@broadcom.com <tusharty.tyagi@broadcom.com>  Wed, 06 Sep 2017 18:20:43 -0400
+
+saibcm (2.1.5.1-13) unstable; urgency=medium
+
+  * 20170622 (ec75c6de71a703da896bf6bb0e96b8d05ca4ea4c)
+    Add Accton-AS7716-32X config.bcm file
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Thu, 22 Jun 2017 23:51:53 -0700
+
+saibcm (2.1.5.1-12) unstable; urgency=medium
+
+  * 20170606 (95ee5c71d9d2f4418d3587acfbb72b449c5abc48)
+    Add Accton-AS7712-C32 config.bcm file
+    Add support for ACL redirect action set API
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Wed, 07 Jun 2017 11:26:04 -0700
+
+saibcm (2.1.5.1-11) unstable; urgency=medium
+
+  * 20170605 (05d9ac3598fb0de8f43f52469266b07a1793fbcc)
+    Add Arista-7050-QX32S config.bcm file
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Mon, 05 Jun 2017 16:17:02 -0700
+
+saibcm (2.1.5.1-10) unstable; urgency=medium
+
+  * 20170601 (d0daca8d304b5a2b35bd016e9df95729c229c3c3)
+    Increase the maximum logical ports supported
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Thu, 01 Jun 2017 21:11:33 -0700
+
+saibcm (2.1.5.1-9) unstable; urgency=medium
+
+  * 20170531 (18d6d1ca3523f426110b325ce96c766879e005ee)
+    Add Ingrasys s8900/s9100 config.bcm files
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Wed, 31 May 2017 11:40:25 -0700
+
+saibcm (2.1.5.1-8) unstable; urgency=medium
+
+  * 20170525 (b906d9e813eb3ea2137240bbfd6d33e0ee41fe66)
+    Update config.bcm files and add config_checker/permitted_list.
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Wed, 31 May 2017 11:36:42 -0700
+
+saibcm (2.1.5.1-7) unstable; urgency=medium
+
+  * 20170519 (0843e2a858c2e730b25e7106c83a472e43cd527d)
+    Fixed unknown neighbor processing and neighbor update scenarios.
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Fri, 19 May 2017 12:13:46 -0700
+
+saibcm (2.1.5.1-6) unstable; urgency=medium
+
+  * 20170509 (8303bdbf3f1e18cd6d2c1a44cf5b67be12e49d96)
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Tue, 09 May 2017 16:00:29 -0700
+
+saibcm (2.1.5.1-5) unstable; urgency=medium
+
+  * 20170504 (af8b3629076a5b42283d4762aef54ffe97303bbb)
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Thu, 04 May 2017 13:11:58 -0700
+
+saibcm (2.1.5.1-4) unstable; urgency=medium
+
+  * 20170426 (798a5eecdbfcc429d1a3ab11dde8bb88517d5987)
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Thu, 27 Apr 2017 10:58:37 -0700
+
+saibcm (2.1.5.1-3) unstable; urgency=medium
+
+  * 20170425 Release (e3b9c032926e57414e06c55a439de06ed40774c3)
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Wed, 26 Apr 2017 12:34:33 -0700
+
+saibcm (2.1.5.1-2) unstable; urgency=medium
+
+  * 20170418 Release (0e19fbd99c39b6a34498764640d5671597716ac0)
+    - add SAI_KEY_NUM_ECMP_MEMBERS support
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Wed, 19 Apr 2017 11:40:50 -0700
+
+saibcm (2.1.5.1-1) unstable; urgency=medium
+
+  * 20170303 Release (7c74869681b54ad42e6b8393fa8f33ca1dbde1d0)
+    SAI 0.9.4 based SAI release. Based on OpenNSL 3.2.2.2, SDK 6.5.5.
+  * 20170403 Release (4a974326474c5211f391689248450a9d9487fb2c)
+    - add config.bcm files
+    - add support for tomahawk chip BCM56963
+    Based on OpenNSL 3.2.2.2, SDK 6.5.5.
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Tue, 04 Apr 2017 12:08:35 -0700
+
+saibcm (2.1.3.1) unstable; urgency=medium
+
+  * 20170130 Release (aebe61f40859ec721d8e0911ad60f7e549ffda43)
+    SAI 0.9.4 based SAI release. Based on OpenNSL 3.2.1.5-5, SDK 6.5.5.
+
+ -- Shuotian Cheng <shuotian@debian.redmond.corp.microsoft.com>  Mon, 30 Jan 2017 13:29:58 -0800
+
+saibcm (2.0.3.7) unstable; urgency=medium
+
+  * SAI 0.9.4 based SAI release. Based on OpenNSL 3.2.1.5, SDK 6.5.5.
+
+ -- Shuotian Cheng <shuche@microsoft.com>  Mon, 12 Dec 2016 12:12:12 -0800

@@ -1,0 +1,13 @@
+[Unit]
+Description=Libsaibcm kernel modules init
+After=local-fs.target
+Before=syncd.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/libsaibcm-modules-3.16.0-5-amd64 start
+ExecStop=-/etc/init.d/libsaibcm-modules-3.16.0-5-amd64 stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

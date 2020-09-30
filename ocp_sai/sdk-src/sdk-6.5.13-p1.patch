@@ -1,0 +1,2784 @@
+diff -rupN original/include/bcm/field.h new/include/bcm/field.h
+--- original/include/bcm/field.h	2018-03-30 13:00:32.000000000 +0530
++++ new/include/bcm/field.h	2018-07-12 16:49:39.184545000 +0530
+@@ -5175,6 +5175,7 @@ typedef enum bcm_field_action_e {
+                                            header. */
+     bcmFieldActionErspan3HdrVsmIdAdd = 508, /* This action is to add the VSM Domain
+                                            Id (VSM Domain ID field is the
++                                           identifier of a Cisco Nexus VSM
+                                            domain) in ERSPAN3 header. */
+     bcmFieldActionRoeFrameTypeSet = 509, /* This action is to set or overwrite
+                                            Roe frame type. Roe frame types are
+diff -rupN original/include/bcm/rx.h new/include/bcm/rx.h
+--- original/include/bcm/rx.h	2018-03-30 13:00:32.000000000 +0530
++++ new/include/bcm/rx.h	2018-07-12 16:49:39.191538000 +0530
+@@ -410,6 +410,11 @@ typedef enum bcm_rx_reason_e {
+     bcmRxReasonCount = _SHR_RX_REASON_COUNT 
+ } bcm_rx_reason_t;
+ 
++/* SAI_FIXUP <FP-259736 CS3512614> - Start */
++#if defined(VENDOR_BROADCOM)
++#define bcmRxReasonEgressPbmpNull   bcmRxReasonReserved0 
++#endif
++/* SAI_FIXUP <FP-259736 CS3512614> - End */
+ 
+ /* 
+  * Macro to check if a reason (bcmRxReason*) is included in a set of
+diff -rupN original/include/bcm_int/esw/field.h new/include/bcm_int/esw/field.h
+--- original/include/bcm_int/esw/field.h	2018-03-30 13:00:33.000000000 +0530
++++ new/include/bcm_int/esw/field.h	2018-07-12 17:01:36.351135000 +0530
+@@ -5738,6 +5738,10 @@ typedef struct _field_group_add_fsm_s {
+ #define _BCM_FIELD_PIPE1_GROUP              (0x1)
+ #define _BCM_FIELD_PIPE2_GROUP              (0x2)
+ #define _BCM_FIELD_PIPE3_GROUP              (0x3)
++#define _BCM_FIELD_PIPE4_GROUP              (0x4)
++#define _BCM_FIELD_PIPE5_GROUP              (0x5)
++#define _BCM_FIELD_PIPE6_GROUP              (0x6)
++#define _BCM_FIELD_PIPE7_GROUP              (0x7)
+ #define _BCM_FIELD_GLOBAL_GROUP             (0xf)
+ 
+ #define _BCM_FP_GROUP_ADD_STATE_STRINGS \
+diff -rupN original/include/bcm_int/esw/tomahawk.h new/include/bcm_int/esw/tomahawk.h
+--- original/include/bcm_int/esw/tomahawk.h	2018-03-30 13:00:34.000000000 +0530
++++ new/include/bcm_int/esw/tomahawk.h	2018-07-12 17:01:55.233788000 +0530
+@@ -49,6 +49,8 @@
+ #define TH_MGMT_PORT1_NUM 131  /* Management Port 1 Physical Number */
+ 
+ #if defined(BCM_FIELD_SUPPORT)
++#define _FP_TCAM_IPBMP_SIZE(unit) _field_fp_tcam_ipbmp_size(unit)
++extern int _field_fp_tcam_ipbmp_size(int unit);
+ extern int _bcm_field_th_group_lt_prio_update(int unit, _field_group_t *fg,
+                                               int priority);
+ extern int _bcm_field_th_group_status_calc(int unit, _field_group_t *fg);
+diff -rupN original/include/sdk_custom_config.h new/include/sdk_custom_config.h
+--- original/include/sdk_custom_config.h	1970-01-01 05:30:00.000000000 +0530
++++ new/include/sdk_custom_config.h	2018-07-12 16:49:39.197538000 +0530
+@@ -0,0 +1,26 @@
++/*
++ * $Id: bitop.h,v 1.16 Broadcom SDK $
++ * $Copyright: (c) 2017 Broadcom.
++ * Broadcom Proprietary and Confidential. All rights reserved.$
++ *
++ * SDK custom configuration
++ */
++
++#ifndef _SDK_CUSTOM_CONFIG_H
++#define _SDK_CUSTOM_CONFIG_H
++
++#ifdef BCM_RPC_SUPPORT
++
++#define ATP_RETRY_TIMEOUT_DEFAULT 1000000
++#define ATP_RETRY_COUNT_DEFAULT   20
++/*
++ **       The RPC timeout interval is chosen to be twice the overall ATP
++ **       timeout. Since transaction requires two ATP transfers plus some work on
++ **       remote unit, the timeout should theoretically be twice the ATP
++ **       timeout plus some processing time, but since we use a very long ATP
++ **       timeout we ignore the processing time delay.
++ */
++#define RPC_REPLY_TIMEOUT (2 * ATP_RETRY_TIMEOUT_DEFAULT * ATP_RETRY_COUNT_DEFAULT)
++#endif
++
++#endif /* _SDK_CUSTOM_CONFIG_H */
+diff -rupN original/include/shared/bitop.h new/include/shared/bitop.h
+--- original/include/shared/bitop.h	2018-03-30 13:00:35.000000000 +0530
++++ new/include/shared/bitop.h	2018-07-12 16:49:39.207542000 +0530
+@@ -11,6 +11,11 @@
+ 
+ #include <sal/types.h>
+ 
++#ifdef SAI_FIXUP
++#define OPENNSL_LIB_DLL_EXPORTED __attribute__((__visibility__("default")))
++#else
++#define OPENNSL_LIB_DLL_EXPORTED 
++#endif
+ /* Base type for declarations */
+ #define    SHR_BITDCL        uint32
+ #define    SHR_BITWID        32
+@@ -53,12 +58,12 @@
+ 
+ 
+ /* clear _c bits starting from _b in bit array _a */
+-extern void shr_bitop_range_clear(SHR_BITDCL *a, CONST int b, CONST int c);
++extern void shr_bitop_range_clear(SHR_BITDCL *a, CONST int b, CONST int c) OPENNSL_LIB_DLL_EXPORTED;
+ #define SHR_BITCLR_RANGE(_a, _b, _c)            \
+     (shr_bitop_range_clear(_a, _b, _c))
+ 
+ /* set _c bits starting from _b in bit array _a */
+-extern void shr_bitop_range_set(SHR_BITDCL *a, CONST int b, CONST int c);
++extern void shr_bitop_range_set(SHR_BITDCL *a, CONST int b, CONST int c) OPENNSL_LIB_DLL_EXPORTED;
+ #define SHR_BITSET_RANGE(_a, _b, _c)            \
+     (shr_bitop_range_set(_a, _b, _c))
+ 
+@@ -71,7 +76,7 @@ extern void shr_bitop_range_copy(SHR_BIT
+                                  CONST int b,
+                                  CONST SHR_BITDCL *c,
+                                  CONST int d,
+-                                 CONST int e);
++                                 CONST int e) OPENNSL_LIB_DLL_EXPORTED;
+ #define SHR_BITCOPY_RANGE(_dest, _dest_offset,_src, _src_offset, _num_bits)   \
+     (shr_bitop_range_copy(_dest, _dest_offset, _src, _src_offset, _num_bits))
+ 
+@@ -83,22 +88,22 @@ extern void shr_bitop_range_and(CONST SH
+                                 CONST SHR_BITDCL *bits2,
+                                 CONST int first,
+                                 CONST int bit_count,
+-                                SHR_BITDCL *dest);
++                                SHR_BITDCL *dest) OPENNSL_LIB_DLL_EXPORTED;
+ extern void shr_bitop_range_or(CONST SHR_BITDCL *bits1,
+                                CONST SHR_BITDCL *bits2,
+                                CONST int first,
+                                CONST int bit_count,
+-                               SHR_BITDCL *dest);
++                               SHR_BITDCL *dest) OPENNSL_LIB_DLL_EXPORTED;
+ extern void shr_bitop_range_xor(CONST SHR_BITDCL *bits1,
+                                 CONST SHR_BITDCL *bits2,
+                                 CONST int first,
+                                 CONST int bit_count,
+-                                SHR_BITDCL *dest);
++                                SHR_BITDCL *dest) OPENNSL_LIB_DLL_EXPORTED;
+ extern void shr_bitop_range_remove(CONST SHR_BITDCL *bits1,
+                                    CONST SHR_BITDCL *bits2,
+                                    CONST int first,
+                                    CONST int bit_count,
+-                                   SHR_BITDCL *dest);
++                                   SHR_BITDCL *dest) OPENNSL_LIB_DLL_EXPORTED;
+ 
+ #define SHR_BITAND_RANGE(_bits1, _bits2, _first, _bit_count, _dest) \
+     (shr_bitop_range_and(_bits1, _bits2, _first, _bit_count, _dest))
+@@ -115,16 +120,16 @@ extern void shr_bitop_range_remove(CONST
+ extern void shr_bitop_range_negate(CONST SHR_BITDCL *bits1,
+                                    CONST int first,
+                                    CONST int bit_count,
+-                                   SHR_BITDCL *dest);
++                                   SHR_BITDCL *dest) OPENNSL_LIB_DLL_EXPORTED;
+ 
+ #define SHR_BITNEGATE_RANGE(_bits1, _first, _bit_count, _dest) \
+     (shr_bitop_range_negate(_bits1, _first, _bit_count, _dest))
+ 
+-extern int shr_bitop_range_null(CONST SHR_BITDCL *a, CONST int first, CONST int bit_count);
++extern int shr_bitop_range_null(CONST SHR_BITDCL *a, CONST int first, CONST int bit_count) OPENNSL_LIB_DLL_EXPORTED;
+ extern int shr_bitop_range_eq(CONST SHR_BITDCL *bits1, CONST SHR_BITDCL *bits2,
+-                         CONST int first, CONST int range);
++                         CONST int first, CONST int range) OPENNSL_LIB_DLL_EXPORTED;
+ extern void shr_bitop_range_count(CONST SHR_BITDCL *bits, CONST int first,
+-                                 CONST int range, int *count);
++                                 CONST int range, int *count) OPENNSL_LIB_DLL_EXPORTED;
+ 
+ #define SHR_BITNULL_RANGE(_bits, _first, _range) \
+     (shr_bitop_range_null(_bits, _first, _range))
+diff -rupN original/include/shared/error.h new/include/shared/error.h
+--- original/include/shared/error.h	2018-03-30 13:00:35.000000000 +0530
++++ new/include/shared/error.h	2018-07-12 16:49:39.211555000 +0530
+@@ -59,7 +59,11 @@ typedef enum {
+         "Unknown error"                 /* E_LIMIT */ \
+         }
+ 
++#ifdef SAI_FIXUP
++extern char *_shr_errmsg[] __attribute__((__visibility__("default")));
++#else
+ extern char *_shr_errmsg[];
++#endif
+ 
+ #define _SHR_ERRMSG(r)          \
+         _shr_errmsg[(((int)r) <= 0 && ((int)r) > _SHR_E_LIMIT) ? -(r) : -_SHR_E_LIMIT]
+diff -rupN original/include/shared/pbmp.h new/include/shared/pbmp.h
+--- original/include/shared/pbmp.h	2018-03-30 13:00:35.000000000 +0530
++++ new/include/shared/pbmp.h	2018-07-12 16:49:39.219547000 +0530
+@@ -292,8 +292,13 @@ typedef struct _shr_pbmp {
+ /* For use by pbmp.c */
+ #define _SHR_DEFINE_PBMP_FUNCTIONS
+ 
+-extern int	_shr_pbmp_bmnull(_shr_pbmp_t *);
+-extern int	_shr_pbmp_bmeq(_shr_pbmp_t *, _shr_pbmp_t *);
++#ifdef SAI_FIXUP
++extern int	_shr_pbmp_bmnull(_shr_pbmp_t *) __attribute__((__visibility__("default")));
++extern int	_shr_pbmp_bmeq(_shr_pbmp_t *, _shr_pbmp_t *) __attribute__((__visibility__("default")));
++#else
++ extern int	_shr_pbmp_bmnull(_shr_pbmp_t *);
++ extern int	_shr_pbmp_bmeq(_shr_pbmp_t *, _shr_pbmp_t *);
++#endif
+ 
+ #define	_SHR_PBMP_WENT(port)		((port)/_SHR_PBMP_WORD_WIDTH)
+ #define	_SHR_PBMP_WBIT(port)		(1U<<((port) % _SHR_PBMP_WORD_WIDTH))
+@@ -391,9 +396,14 @@ extern int	_shr_pbmp_bmeq(_shr_pbmp_t *,
+ 
+ #endif	/* _SHR_PBMP_WIDTH == 0 */
+ 
+-extern char		*_shr_pbmp_format(_shr_pbmp_t, char *);
++#ifdef SAI_FIXUP
++extern char		*_shr_pbmp_format(_shr_pbmp_t, char *) __attribute__((__visibility__("default")));
++extern int		_shr_pbmp_decode(char *, _shr_pbmp_t *) __attribute__((__visibility__("default")));
++#else
++ extern char		*_shr_pbmp_format(_shr_pbmp_t, char *);
++ extern int		_shr_pbmp_decode(char *, _shr_pbmp_t *);
++#endif
+ char            *shr_pbmp_range_format(_shr_pbmp_t bmp, char *buf, int buf_size);
+-extern int		_shr_pbmp_decode(char *, _shr_pbmp_t *);
+ 
+ #define	_SHR_PBMP_FMT(bm, buf)		_shr_pbmp_format(bm, buf)
+ #define	_SHR_PBMP_FMT_LEN		((_SHR_PBMP_WORD_MAX*8)+3)
+diff -rupN original/include/shared/util.h new/include/shared/util.h
+--- original/include/shared/util.h	2018-03-30 13:00:36.000000000 +0530
++++ new/include/shared/util.h	2018-07-12 16:49:39.223551000 +0530
+@@ -17,7 +17,11 @@
+ extern unsigned short _shr_swap16(unsigned short val);
+ extern unsigned int _shr_swap32(unsigned int val);
+ 
+-extern int _shr_popcount(unsigned int);
++#ifdef SAI_FIXUP
++extern int _shr_popcount(unsigned int) __attribute__((__visibility__("default")));
++#else
++ extern int _shr_popcount(unsigned int);
++#endif
+ 
+ extern uint8 _shr_bit_rev8(uint8 n);
+ extern uint16 _shr_bit_rev16(uint16 n);
+diff -rupN original/include/soc/robo_fp.h new/include/soc/robo_fp.h
+--- original/include/soc/robo_fp.h	2018-03-30 13:00:40.000000000 +0530
++++ new/include/soc/robo_fp.h	2018-07-12 16:49:39.232549000 +0530
+@@ -2542,6 +2542,7 @@ typedef enum drv_field_action_e {
+                                            header. */
+     drvFieldActionErspan3HdrVsmIdAdd = 508, /* This action is to add the VSM Domain
+                                            Id (VSM Domain ID field is the
++                                           identifier of a Cisco Nexus VSM
+                                            domain) in ERSPAN3 header. */
+     drvFieldActionRoeFrameTypeSet = 509, /* This action is to set or overwrite
+                                            Roe frame type. Roe frame types are
+diff -rupN original/src/appl/diag/dcmn/cmdlist.c new/src/appl/diag/dcmn/cmdlist.c
+--- original/src/appl/diag/dcmn/cmdlist.c	2018-03-30 13:01:10.000000000 +0530
++++ new/src/appl/diag/dcmn/cmdlist.c	2018-07-12 16:49:39.239544000 +0530
+@@ -135,7 +135,11 @@ cmd_t bcm_dpp_cmd_list[] = {
+      "LLM Application"},
+ #endif /* defined(__DUNE_GTO_BCM_CPU__) && defined(BCM_PETRA_SUPPORT) && defined(BCM_CMICM_SUPPORT) */
+ 
++/* SAI_FIXUP <FP-263930 SDK-145986> - Start */
++#ifndef SAL_CONFIG_FILE_DISABLE
+     {"MBIST",      cmd_sand_mbist,     cmd_sand_mbist_usage, cmd_sand_mbist_desc},
++#endif 
++/* SAI_FIXUP <FP-263930 SDK-145986> - End */
+ 
+     {"MODify",      cmd_sand_mem_modify,       cmd_sand_mem_modify_usage,
+      "Modify table entry by field names" },
+diff -rupN original/src/appl/diag/dnxf/diag_dnxf_cmdlist.c new/src/appl/diag/dnxf/diag_dnxf_cmdlist.c
+--- original/src/appl/diag/dnxf/diag_dnxf_cmdlist.c	2018-03-30 13:01:10.000000000 +0530
++++ new/src/appl/diag/dnxf/diag_dnxf_cmdlist.c	2018-07-12 16:49:39.248535000 +0530
+@@ -49,7 +49,11 @@ sh_sand_cmd_t sh_dnxf_commands[] = {
+     {"pbmp", cmd_dnxc_pbmp, NULL, dnxc_pbmp_options, &sh_dnxc_pbmp_man},
+     {"port",    NULL, sh_dnxc_port_cmds,    NULL, &sh_dnxc_port_man},
+     {"phy",  NULL,  sh_dnxc_phy_cmds,  NULL,  &sh_dnxc_phy_man},
++/* SAI_FIXUP <FP-263930 SDK-145986> - Start */
++#ifndef SAL_CONFIG_FILE_DISABLE
+     {"mbist", NULL, sh_sand_mbist_cmds, NULL, &sh_sand_mbist_man},
++#endif
++/* SAI_FIXUP <FP-263930 SDK-145986> - End */
+     {NULL}      /* This line should always stay as last one */
+ };
+ 
+diff -rupN original/src/appl/diag/dpp/knetctrl.c new/src/appl/diag/dpp/knetctrl.c
+--- original/src/appl/diag/dpp/knetctrl.c	2018-03-30 13:01:10.000000000 +0530
++++ new/src/appl/diag/dpp/knetctrl.c	2018-07-12 16:49:39.252538000 +0530
+@@ -47,6 +47,7 @@ char cmd_dpp_knet_usage[] =
+     "          [StripTag=yes|no]    - Strip VLAN tag before sending packet to NetIF\n"
+     "          [Mirror=yes|no]      - Copy packet to RxAPI (if DestType=NetIF)\n"
+     "          [DestProto=<proto>]  - Override default protocol (if DestType=NetIF)\n"
++    "          [Vlan=<vlan>]        - Match specified VLAN ID\n" /* SAI_FIXUP <FP-261871 SDK-138957> */
+     "          [IngPort=<port>]     - Match specified local ingress port\n"
+     "          [TrapID=<id>]        - Match specified Trap ID\n"
+     "          [Reason=<reason>]    - Match specified reason for copy to CPU\n"
+diff -rupN original/src/appl/diag/sand/diag_sand_mbist.c new/src/appl/diag/sand/diag_sand_mbist.c
+--- original/src/appl/diag/sand/diag_sand_mbist.c	2018-03-30 13:01:12.000000000 +0530
++++ new/src/appl/diag/sand/diag_sand_mbist.c	2018-07-12 16:49:39.260541000 +0530
+@@ -30,6 +30,8 @@
+ #include <appl/diag/sand/diag_sand_prt.h>
+ #include <appl/diag/sand/diag_sand_mbist.h>
+ 
++/* SAI_FIXUP <FP-263930 SDK-145986> - Start */
++#ifndef SAL_CONFIG_FILE_DISABLE
+ diag_sand_mbist_info_t diag_sand_mbist_info[BCM_MAX_NUM_UNITS] = {
+     {0}
+ };
+@@ -575,4 +577,7 @@ const char cmd_sand_mbist_usage[] = "Ple
+  */
+ const char cmd_sand_mbist_desc[] = "MBIST diagnostic commands";
+ 
++#endif
++/* SAI_FIXUP <FP-263930 SDK-145986> End */
++
+ #undef BSL_LOG_MODULE
+diff -rupN original/src/bcm/esw/field_common.c new/src/bcm/esw/field_common.c
+--- original/src/bcm/esw/field_common.c	2018-03-30 13:01:20.000000000 +0530
++++ new/src/bcm/esw/field_common.c	2018-07-12 17:02:35.462033000 +0530
+@@ -29690,6 +29690,18 @@ _field_tcam_policy_install(int unit, bcm
+                 f_ent[idx].tcam.key = f_ent[idx].tcam.mask = NULL;
+             }
+         }
++        /* SAI_FIXUP <FP-262890 SDK-145129 CS4763995> - Start */
++        /*
++         * TD3 qualifies on Inports for all other pipes in Global Mode
++         * inturn set _FP_ENTRY_DIRTY for all other parts of entry
++         */
++        if (soc_feature(unit, soc_feature_td3_style_fp) &&
++            BCM_FIELD_QSET_TEST(f_ent->group->qset, bcmFieldQualifyInPorts)) {
++            for (idx = parts_count - 1; idx >=0; idx--) {
++                f_ent[idx].flags &= ~_FP_ENTRY_DIRTY;
++            }
++        }
++        /* SAI_FIXUP <FP-262890 SDK-145129 CS4763995> - End */
+     }
+ 
+     if (BCM_FAILURE(rv)) {
+@@ -40751,13 +40763,17 @@ _bcm_field_qualify_InPorts_get(int unit,
+                 case _BCM_FIELD_PIPE1_GROUP:
+                 case _BCM_FIELD_PIPE2_GROUP:
+                 case _BCM_FIELD_PIPE3_GROUP:
++                case _BCM_FIELD_PIPE4_GROUP:
++                case _BCM_FIELD_PIPE5_GROUP:
++                case _BCM_FIELD_PIPE6_GROUP:
++                case _BCM_FIELD_PIPE7_GROUP:
+                     BCM_PBMP_ITER(f_ent->pbmp.data, port)  {
+                         BCM_PBMP_PORT_ADD(*data, port +
+-                                (34 * f_ent->group->instance));
++					  (_FP_TCAM_IPBMP_SIZE(unit) * f_ent->group->instance));
+                     }
+                     BCM_PBMP_ITER(f_ent->pbmp.mask, port)  {
+                         BCM_PBMP_PORT_ADD(*mask, port +
+-                                (34 * f_ent->group->instance));
++                                (_FP_TCAM_IPBMP_SIZE(unit) * f_ent->group->instance));
+                     }
+                     break;
+                 case _BCM_FIELD_GLOBAL_GROUP:
+diff -rupN original/src/bcm/esw/tomahawk/field.c new/src/bcm/esw/tomahawk/field.c
+--- original/src/bcm/esw/tomahawk/field.c	2018-03-30 13:01:22.000000000 +0530
++++ new/src/bcm/esw/tomahawk/field.c	2018-07-12 17:42:33.119228000 +0530
+@@ -71,7 +71,6 @@ static char *action_name[bcmFieldActionC
+ #define _FP_LT_ID_BASE 0
+ #define _FP_LT_ID_MAX (0x1F)
+ 
+-#define _FP_TCAM_IPBMP_SIZE(unit) _field_fp_tcam_ipbmp_size(unit)
+ 
+ /* Valid PortBitmap */
+ #define _BCM_FIELD_VALID_PIPE_PBMP_GET(_unit_, _inst_, _pbm_)                  \
+@@ -556,8 +555,6 @@ STATIC int _field_ser_oper_mode_init(int
+ STATIC int
+ _field_th_ingress_tcam_policy_clear(int unit, _field_entry_t *f_ent,
+                                     int tcam_idx);
+-static int
+-_field_fp_tcam_ipbmp_size(int unit);
+ 
+ /*
+  * Function: _bcm_field_th_control_set
+@@ -27189,16 +27186,16 @@ _field_ingress_entry_tcam_wide_install(i
+  *     pbmp_size
+  */
+ 
+-static int
++int
+ _field_fp_tcam_ipbmp_size(int unit) {
+ 
+ #ifdef BCM_TOMAHAWK3_SUPPORT
+     if (SOC_IS_TOMAHAWK3(unit)) {
+-        return 20;
++        return soc_mem_field_length(unit, IFP_TCAMm, IPBMf);
+     } else
+ #endif
+     {
+-        return 34;
++        return soc_mem_field_length(unit, IFP_TCAM_WIDEm, IPBMf);
+     }
+ }
+ 
+@@ -27443,7 +27440,6 @@ _field_th_ingress_entry_qual_tcam_instal
+     soc_mem_field32_set(unit, tcam_mem, entry_buf, VALIDf, valid);
+ #if defined(BCM_TOMAHAWK2_SUPPORT)
+     if (soc_feature(unit, soc_feature_xy_tcam_x0y) &&
+-        soc_feature(unit, soc_feature_field_multi_pipe_enhanced) &&
+         _BCM_FIELD_QSET_PBMP_TEST(f_ent->group->qset)) {
+         bcm_pbmp_t      valid_pbm; /* valid_pbm in HW. */
+         _field_entry_t  *entry_p = NULL;
+@@ -30928,6 +30924,10 @@ _bcm_field_th_qualify_PortBitmap(int uni
+         case _BCM_FIELD_PIPE1_GROUP:
+         case _BCM_FIELD_PIPE2_GROUP:
+         case _BCM_FIELD_PIPE3_GROUP:
++        case _BCM_FIELD_PIPE4_GROUP:
++        case _BCM_FIELD_PIPE5_GROUP:
++        case _BCM_FIELD_PIPE6_GROUP:
++        case _BCM_FIELD_PIPE7_GROUP:
+             BCM_PBMP_ITER(data, port)  {
+                  if ((port - (_FP_TCAM_IPBMP_SIZE(unit) * instance)) < 0) {
+                      return BCM_E_PARAM;
+@@ -31089,19 +31089,23 @@ _bcm_field_th_qualify_InPorts(int unit,
+         case _BCM_FIELD_PIPE1_GROUP:
+         case _BCM_FIELD_PIPE2_GROUP:
+         case _BCM_FIELD_PIPE3_GROUP:
++        case _BCM_FIELD_PIPE4_GROUP:
++        case _BCM_FIELD_PIPE5_GROUP:
++        case _BCM_FIELD_PIPE6_GROUP:
++        case _BCM_FIELD_PIPE7_GROUP:
+             BCM_PBMP_ITER(data, port)  {
+-                 if ((port - (34 * instance)) < 0) {
++	      if ((port - (_FP_TCAM_IPBMP_SIZE(unit) * instance)) < 0) {
+                      return BCM_E_PARAM;
+                  }
+                  BCM_PBMP_PORT_ADD(f_ent->pbmp.data, port -
+-                                   (34 * f_ent->group->instance));
++                                   (_FP_TCAM_IPBMP_SIZE(unit) * f_ent->group->instance));
+             }
+             BCM_PBMP_ITER(mask, port)  {
+-                 if ((port - (34 * instance)) < 0) {
++                 if ((port - (_FP_TCAM_IPBMP_SIZE(unit) * instance)) < 0) {
+                      return BCM_E_PARAM;
+                  }
+                  BCM_PBMP_PORT_ADD(f_ent->pbmp.mask, port -
+-                                   (34 * f_ent->group->instance));
++                                   (_FP_TCAM_IPBMP_SIZE(unit) * f_ent->group->instance));
+             }
+             break;
+         case _BCM_FIELD_GLOBAL_GROUP:
+@@ -33572,15 +33576,8 @@ _bcm_field_th_entry_phys_dump(int unit, 
+             uint32        tcam_entry[SOC_MAX_MEM_FIELD_WORDS] = {0};
+             bcm_port_t    port;        /* Holds physical port number. */
+             bcm_port_t    system_port;
+-            soc_mem_t tcam_mem[_FP_MAX_NUM_PIPES] = /* IFP TCAM memory names. */
+-                                           {
+-                                               IFP_TCAM_WIDE_PIPE0m,
+-                                               IFP_TCAM_WIDE_PIPE1m,
+-                                               IFP_TCAM_WIDE_PIPE2m,
+-                                               IFP_TCAM_WIDE_PIPE3m
+-                                           };
+-
+             pipe_ports_max = SOC_MAX_NUM_PORTS/SOC_MAX_NUM_PIPES;
++            soc_mem_t tcam_mem = INVALIDm;
+ 
+             (void)_bcm_field_th_slice_offset_to_tcam_idx(unit, stage_fc,
+                                                    f_ent->group->instance,
+@@ -33595,12 +33592,23 @@ _bcm_field_th_entry_phys_dump(int unit, 
+                 if (!(fc->pipe_map & (1 << inst))) {
+                      continue;
+                 }
+-                rv = soc_th_ifp_mem_read(unit, tcam_mem[inst], MEM_BLOCK_ANY,
++
++                if (soc_feature(unit, soc_feature_th3_style_fp)) {
++                    BCM_IF_ERROR_RETURN(_bcm_field_mem_instance_get(unit,
++                                                       IFP_TCAMm,
++                                                       inst, &tcam_mem));
++                } else {
++                    BCM_IF_ERROR_RETURN(_bcm_field_mem_instance_get(unit,
++                                                       IFP_TCAM_WIDEm,
++                                                       inst, &tcam_mem));
++                }
++
++                rv = soc_th_ifp_mem_read(unit, tcam_mem, MEM_BLOCK_ANY,
+                                          tcam_idx, tcam_entry);
+                 SOC_IF_ERROR_RETURN(rv);
+ 
+                 sal_memset(&pipe_pbmp, 0x0, sizeof(_field_pbmp_t));
+-                soc_mem_pbmp_field_get(unit, tcam_mem[inst], tcam_entry,
++                soc_mem_pbmp_field_get(unit, tcam_mem, tcam_entry,
+                                             IPBMf, &pipe_pbmp.data);
+ 
+                 BCM_PBMP_ITER(pipe_pbmp.data, port) {
+@@ -33611,7 +33619,7 @@ _bcm_field_th_entry_phys_dump(int unit, 
+                     }
+                 }
+ 
+-                soc_mem_pbmp_field_get(unit, tcam_mem[inst], tcam_entry,
++                soc_mem_pbmp_field_get(unit, tcam_mem, tcam_entry,
+                                            IPBM_MASKf, &pipe_pbmp.mask);
+ 
+ 
+diff -rupN original/src/bcm/esw/tomahawk/ipmc.c new/src/bcm/esw/tomahawk/ipmc.c
+--- original/src/bcm/esw/tomahawk/ipmc.c	2018-03-30 13:01:22.000000000 +0530
++++ new/src/bcm/esw/tomahawk/ipmc.c	2018-07-12 16:49:39.401539000 +0530
+@@ -2692,11 +2692,15 @@ _bcm_td3_repl_head_tbl_read(int unit, in
+                                              HEAD_PTRf);
+         }
+     } else {
+-#ifdef BCM_TOMAHAWK3_SUPPORT
+-        repl_hd_tbl = MMU_REPL_HEAD_TBLm;
+-#else
+-        repl_hd_tbl = REPL_HEAD_TBL_PIPE(unit, pipe);
++
++#if defined(BCM_TOMAHAWK3_SUPPORT)
++        if (SOC_IS_TOMAHAWK3(unit)) {
++            repl_hd_tbl = MMU_REPL_HEAD_TBLm;
++        } else
+ #endif
++        {
++            repl_hd_tbl = REPL_HEAD_TBL_PIPE(unit, pipe);
++        }
+ 
+         SOC_IF_ERROR_RETURN(soc_mem_read(unit, repl_hd_tbl, MEM_BLOCK_ALL,
+                                          index, entry));
+diff -rupN original/src/sal/core/unix/thread.c new/src/sal/core/unix/thread.c
+--- original/src/sal/core/unix/thread.c	2018-03-30 13:01:30.000000000 +0530
++++ new/src/sal/core/unix/thread.c	2018-07-12 16:49:39.342542000 +0530
+@@ -128,6 +128,16 @@ sal_thread_resource_usage_get(unsigned i
+ #endif
+ #endif
+ 
++/* SAI_FIXUP <FP-263930> - Start */
++#ifndef PTHREAD_STACK_MIN
++#  ifdef PTHREAD_STACK_SIZE
++#    define PTHREAD_STACK_MIN PTHREAD_STACK_SIZE
++#  else
++#    define PTHREAD_STACK_MIN 0
++#  endif
++#endif
++/* SAI_FIXUP <FP-263930> - End */
++
+ /*
+  * Function:
+  *	thread_boot
+diff -rupN original/src/soc/common/feature.c new/src/soc/common/feature.c
+--- original/src/soc/common/feature.c	2018-03-30 13:01:35.000000000 +0530
++++ new/src/soc/common/feature.c	2018-07-12 17:41:19.715590000 +0530
+@@ -3318,6 +3318,7 @@ soc_features_bcm56980_a0(int unit, soc_f
+     case soc_feature_port_lag_failover:
+     case soc_feature_mpls_swap_label_preserve:
+     case soc_feature_dlb_flow_monitoring:
++    case soc_feature_xy_tcam_x0y:
+         return TRUE;
+     case soc_feature_failover_fixed_nh_offset:
+         if (soc_property_get(unit, spn_FAILOVER_FIXED_NH_OFFSET_ENABLE, 0)) {
+diff -rupN original/src/soc/esw/drv.c new/src/soc/esw/drv.c
+--- original/src/soc/esw/drv.c	2018-03-30 13:01:43.000000000 +0530
++++ new/src/soc/esw/drv.c	2018-07-12 16:49:39.389539000 +0530
+@@ -8729,7 +8729,8 @@ soc_do_init(int unit, int reset)
+ #ifdef BCM_TOMAHAWK_SUPPORT
+         if (SOC_IS_TOMAHAWK(unit) || SOC_IS_TOMAHAWK2(unit) ||
+             SOC_IS_TRIDENT3X(unit)) {
+-            SOC_IF_ERROR_RETURN(soc_th_l2_bulk_age_stop(unit));
++			/* SAI_FIXUP SDK-?????? */
++            ; //SOC_IF_ERROR_RETURN(soc_th_l2_bulk_age_stop(unit));
+         }
+ #endif /* BCM_TOMAHAWK_SUPPORT */
+ #endif /* BCM_XGS_SWITCH_SUPPORT */
+diff -rupN original/systems/linux/user/common/Makefile new/systems/linux/user/common/Makefile
+--- original/systems/linux/user/common/Makefile	2018-03-30 13:02:20.000000000 +0530
++++ new/systems/linux/user/common/Makefile	2018-07-12 16:49:39.356545000 +0530
+@@ -300,25 +300,31 @@ endif
+ 	$(MAKE) -C $(SDK)/systems/bde/linux/kernel kernel_version=$(kernel_version) OPT_CFLAGS="$(ADD_TO_CFLAGS)"; \
+ 	$(MAKE) -C $(SDK)/systems/bde/linux/user/kernel kernel_version=$(kernel_version) OPT_CFLAGS="$(ADD_TO_CFLAGS)"
+ ifdef BUILD_KNET
+-	$(MAKE) -C $(SDK)/systems/linux/kernel/modules kernel_version=$(kernel_version) OPT_CFLAGS="$(ADD_TO_CFLAGS)" \
++	$(MAKE) -j1 -C $(SDK)/systems/linux/kernel/modules kernel_version=$(kernel_version) OPT_CFLAGS="$(ADD_TO_CFLAGS)" \
+ 		subdirs="$(knet_subdirs)" override-target=linux-$(platform)
+ endif
+ 
++#SAI_FIXUP
++CFLAGS:=$(filter-out -fPIC, $(CFLAGS))
++KO_FLAGS=$(filter-out -fPIC, $(CFLAGS))
++SO_FLAGS=-fPIC
+ user_libs:
+ ifdef CUSTOMER_SOURCE_DIR
+ 	$(MAKE) -C $(CUSTOMER_SOURCE_DIR) CFLAGS="$(CFLAGS)"
+ endif
+ 	$(MAKE) -C $(SDK)/systems/bde/linux/user CFLAGS="$(CFLAGS)"
++#SAI_FIXUP
+ ifdef BUILD_PHYMOD
+-	$(MAKE) -C $(SDK)/libs/phymod LINUX_MAKE_SHARED_LIB=${LINUX_MAKE_SHARED_LIB} SHAREDLIBVER=${SHAREDLIBVER}
++	$(MAKE) -C $(SDK)/libs/phymod CFLAGS="$(CFLAGS) $(SO_FLAGS)" LINUX_MAKE_SHARED_LIB=${LINUX_MAKE_SHARED_LIB} SHAREDLIBVER=${SHAREDLIBVER}
+ endif
+ ifdef BUILD_PCIEG3
+ 	$(MAKE) -C $(SDK)/libs/pcieg3
+ endif
+-	$(MAKE) -C $(SDK)/src CFLAGS="$(ADD_TO_CFLAGS)"
+-	$(MAKE) -C $(SDK)/systems/drv CFLAGS="$(CFLAGS)"
++	$(MAKE) -C $(SDK)/src CFLAGS="$(ADD_TO_CFLAGS) $(SO_FLAGS)"
++	$(MAKE) -C $(SDK)/systems/drv CFLAGS="$(CFLAGS) $(SO_FLAGS)"
+ ifdef BUILD_KNET
+-	$(MAKE) -C $(SDK)/systems/linux/kernel/user/shared CFLAGS="$(CFLAGS)"
++#SAI_FIXUP
++	$(MAKE) -C $(SDK)/systems/linux/kernel/user/shared CFLAGS="$(CFLAGS) $(KO_FLAGS)"
+ endif
+ ifdef BUILD_XFLOW_MACSEC
+ 	@${ECHO} "Building XFLOW_MACSEC libraries ...."
+@@ -344,17 +350,20 @@ else
+ PLATFORM_DEFINES_OBJ=
+ endif
+ 
+-
++#SAI_FIXUP
++$(BCM): CFLAGS += -fPIC
+ $(BCM): $(BCM).dbg
+ 	mkdir -p $(@D)
+-	$(OBJCOPY) --strip-debug $< $@
++#SAI_FIXUP skip building bcm.user
++	#$(OBJCOPY) --strip-debug $< $@
+ 
+ $(BCM).dbg: user_libs $(BLDDIR)/socdiag.o $(BLDDIR)/version.o \
+ 	${PLATFORM_DEFINES_OBJ}
+ 	@rm -f $@	# Prevent core dump if currently running
+ 	@echo Linking $@ # This is needed for error parsing
+-	$(CC) $(CFLAGS) -o $@ $(BLDDIR)/socdiag.o $(BLDDIR)/version.o \
+-	-Wl,--start-group ${PLATFORM_DEFINES_OBJ} $(BCM_LIBS_BLD)  -Wl,--end-group $(LDFLAGS)
++#SAI_FIXUP skip building bcm.user.dbg
++#	$(CC) $(CFLAGS) -o $@ $(BLDDIR)/socdiag.o $(BLDDIR)/version.o \
++#	-Wl,--start-group ${PLATFORM_DEFINES_OBJ} $(BCM_LIBS_BLD)  -Wl,--end-group $(LDFLAGS)
+ 
+ 
+ $(KERNEL_BDE): $(KERN_BLDROOT)/linux-kernel-bde.$(KOBJ)
+@@ -442,6 +451,16 @@ distclean::
+ variable::
+ 	@echo $($(VAR))
+ 
++
++# Output the CFLAGS used by the SDK 
++#
++ifneq ($(findstring SAI_FIXUP,$(CFLAGS)),)
++.PHONY: get_sdk_flags
++
++get_sdk_flags::
++	@echo "CFLAGS_SDK := $(filter -U% -D%,$(CFLAGS))" >$(SDK_FLAGS_FILE)
++endif
++
+ else
+ ifndef DELIVERY
+ $(error DELIVERY required)
+
+--- original/src/bcm/esw/mirror.c    2018-03-30 03:31:20.000000000 -0400
++++ new/src/bcm/esw/mirror.c        2018-07-19 16:52:17.182712000 -0400
+@@ -10317,9 +10317,12 @@ _bcm_trident_mirror_l2_tunnel_set(int un
+     soc_EGR_MIRROR_ENCAP_CONTROLm_field32_set(unit, control_entry_p,
+                          ENTRY_TYPEf, BCM_TD_MIRROR_ENCAP_TYPE_RSPAN);
+ 
+-    soc_EGR_MIRROR_ENCAP_CONTROLm_field32_set(unit, control_entry_p,
+-                         RSPAN__ADD_OPTIONAL_HEADERf,
+-                         BCM_TD_MIRROR_HEADER_ONLY);
++    if (SOC_MEM_FIELD_VALID(unit, EGR_MIRROR_ENCAP_CONTROLm,
++                            RSPAN__ADD_OPTIONAL_HEADERf)) {
++        soc_EGR_MIRROR_ENCAP_CONTROLm_field32_set(unit, control_entry_p,
++                             RSPAN__ADD_OPTIONAL_HEADERf,
++                             BCM_TD_MIRROR_HEADER_ONLY);
++    }
+ 
+     if (soc_feature(unit, soc_feature_trill)) {
+         soc_EGR_MIRROR_ENCAP_CONTROLm_field32_set(unit, control_entry_p,
+diff --git a/src/soc/esw/tomahawk/l2x.c b/src/soc/esw/tomahawk/l2x.c
+index a5ff5f3..d22f83a 100644
+--- a/src/soc/esw/tomahawk/l2x.c
++++ b/src/soc/esw/tomahawk/l2x.c
+@@ -259,13 +259,15 @@
+                     break;
+                 }
+             }
+-            /* age interval is changed */
+-            if (soc->l2x_age_interval && (rv == 0 || interval != soc->l2x_age_interval)) {
+-                interval = soc->l2x_age_interval;
+-                goto age_delay;
+-            } else if (r) {
+-                 /* age interval is not changed */
+-                (void)sal_sem_take(soc->l2x_age_notify, r);
++            if (soc->l2x_age_interval) {
++                if (rv == 0 || interval != soc->l2x_age_interval) {
++                    /* age interval is changed */
++                    interval = soc->l2x_age_interval;
++                    goto age_delay;
++                } else if (r) {
++                     /* age interval is not changed */
++                    (void)sal_sem_take(soc->l2x_age_notify, r);
++                }
+             }
+         } else {
+             rv = sal_sem_take(soc->l2x_age_notify, interval * 1000000);
+diff --git a/src/bcm/esw/alpm2/alpm_hit.c b/src/bcm/esw/alpm2/alpm_hit.c
+index d2ef7f3..fac6d46 100755
+--- a/src/bcm/esw/alpm2/alpm_hit.c
++++ b/src/bcm/esw/alpm2/alpm_hit.c
+@@ -622,5 +622,25 @@
+     return rv;
+ }
+ 
++/*
++ * Function:
++ *      alpm_dist_hitbit_thread_stop
++ * Purpose:
++ *      Stop the ALPM distributed hitbits thread
++ * Parameters:
++ *      u  - Device unit #.
++ * Returns:
++ *      BCM_E_XXX
++ */
++int
++alpm_dist_hitbit_thread_stop(int unit)
++{
++    int rv = BCM_E_NONE;
++    if (ALPMC(unit) && !ALPM_HIT_SKIP(unit)) {
++        rv = alpm_dist_hitbit_enable_set(unit, 0);
++    }
++    return rv;
++}
++
+ #endif /* ALPM_ENABLE */
+ 
+diff --git a/src/soc/esw/drv.c b/src/soc/esw/drv.c
+index b4fe46a..d23aa33 100755
+--- a/src/soc/esw/drv.c
++++ b/src/soc/esw/drv.c
+@@ -142,6 +142,7 @@
+ #if defined(BCM_TOMAHAWK2_SUPPORT)
+ #include <soc/tomahawk2.h>
+ #endif /* BCM_TOMAHAWK2_SUPPORT */
++
+ #include <soc/mmuerr.h>
+ #include <soc/higig.h>
+ #include <soc/ipoll.h>
+@@ -169,6 +170,10 @@
+ #define   BCM_SABER_MAX_COUNTER_POOL      8
+ #endif
+ extern int _bcm_esw_ibod_sync_recovery_stop(int unit);
++
++#ifdef ALPM_ENABLE
++extern int alpm_dist_hitbit_thread_stop(int unit);
++#endif
+ 
+ #ifdef BCM_WARM_BOOT_SUPPORT
+ STATIC int soc_warmboot_reset(int unit);
+@@ -9370,6 +9375,14 @@
+             sal_mutex_give(soc->arlShadowMutex);
+         }
+ 
++#ifdef ALPM_ENABLE
++#if defined(BCM_TOMAHAWK_SUPPORT)
++        if (soc_property_get(unit, spn_L3_ALPM_ENABLE, 0) &&
++            soc_feature(unit, soc_feature_alpm2)) {
++            SOC_IF_ERROR_RETURN(alpm_dist_hitbit_thread_stop(unit));
++        }
++#endif
++#endif
+ #ifdef BCM_TOMAHAWK3_SUPPORT
+         if (SOC_IS_TOMAHAWK3(unit)) {
+             SOC_IF_ERROR_RETURN(soc_th3_l2_age_stop(unit));
+@@ -11472,6 +11485,14 @@
+             SOC_IF_ERROR_RETURN(soc_th_l2_bulk_age_stop(unit));
+         }
+ #endif /* BCM_TOMAHAWK_SUPPORT */
++#ifdef ALPM_ENABLE
++#if defined(BCM_TOMAHAWK_SUPPORT)
++        if (soc_property_get(unit, spn_L3_ALPM_ENABLE, 0) &&
++            soc_feature(unit, soc_feature_alpm2)) {
++            SOC_IF_ERROR_RETURN(alpm_dist_hitbit_thread_stop(unit));
++        }
++#endif
++#endif
+ #ifdef BCM_TOMAHAWK3_SUPPORT
+     /* Stop L2 learning and aging threads */
+     if (SOC_IS_TOMAHAWK3(unit)) {
+@@ -20915,6 +20936,14 @@
+         SOC_IF_ERROR_RETURN(soc_th_l2_bulk_age_stop(unit));
+     }
+ #endif /* BCM_TOMAHAWK_SUPPORT */
++#ifdef ALPM_ENABLE
++#if defined(BCM_TOMAHAWK_SUPPORT)
++    if (soc_property_get(unit, spn_L3_ALPM_ENABLE, 0) &&
++        soc_feature(unit, soc_feature_alpm2)) {
++        SOC_IF_ERROR_RETURN(alpm_dist_hitbit_thread_stop(unit));
++    }
++#endif
++#endif
+ #ifdef BCM_TOMAHAWK3_SUPPORT
+     /* Stop L2 learning and aging threads */
+     if (SOC_IS_TOMAHAWK3(unit)) {
+
+diff --git a/src/soc/esw/cancun.c b/src/soc/esw/cancun.c 
+index 75b60c1..3da4aca 100644
+--- a/src/soc/esw/cancun.c
++++ b/src/soc/esw/cancun.c
+@@ -247,5 +254,6 @@ void soc_cancun_deinit(uint32 unit) {
+         }
+
+         sal_free(cc);
++        soc_cancun_info[unit] = (soc_cancun_t*)NULL;
+     }
+ }
+
+diff --git a/src/bcm/esw/tomahawk/field_grp.c b/src/bcm/esw/tomahawk/field_grp.c
+index 23ed1f5..d6f6c22 100644
+--- a/src/bcm/esw/tomahawk/field_grp.c
++++ b/src/bcm/esw/tomahawk/field_grp.c
+@@ -4561,25 +4561,27 @@
+     }
+ 
+ #if defined(BCM_TOMAHAWK3_SUPPORT)
+-    if (_FP_EXT_SELCODE_DONT_CARE != fg->ext_codes[index].udf_sel) {
+-        soc_mem_field32_set(unit, lt_data_mem, data,
+-            UDF_SELf, fg->ext_codes[index].udf_sel);
+-    }
+-    /* Check and set Destination Container A selector. */
+-    if (_FP_EXT_SELCODE_DONT_CARE != fg->ext_codes[index].dst_cont_a_sel) {
+-        soc_mem_field32_set(unit, lt_data_mem, data,
+-            DST_CONTAINER_0_SELf, fg->ext_codes[index].dst_cont_a_sel);
+-    }
++    if (SOC_IS_TOMAHAWK3(unit)) {
++            if (_FP_EXT_SELCODE_DONT_CARE != fg->ext_codes[index].udf_sel) {
++            soc_mem_field32_set(unit, lt_data_mem, data,
++                UDF_SELf, fg->ext_codes[index].udf_sel);
++        }
++        /* Check and set Destination Container A selector. */
++        if (_FP_EXT_SELCODE_DONT_CARE != fg->ext_codes[index].dst_cont_a_sel) {
++            soc_mem_field32_set(unit, lt_data_mem, data,
++                DST_CONTAINER_0_SELf, fg->ext_codes[index].dst_cont_a_sel);
++        }
+ 
+-    /* Check and set Destination Container B selector. */
+-    if (_FP_EXT_SELCODE_DONT_CARE != fg->ext_codes[index].dst_cont_b_sel) {
+-        soc_mem_field32_set(unit, lt_data_mem, data,
+-            DST_CONTAINER_1_SELf, fg->ext_codes[index].dst_cont_b_sel);
+-    }
++        /* Check and set Destination Container B selector. */
++        if (_FP_EXT_SELCODE_DONT_CARE != fg->ext_codes[index].dst_cont_b_sel) {
++            soc_mem_field32_set(unit, lt_data_mem, data,
++                DST_CONTAINER_1_SELf, fg->ext_codes[index].dst_cont_b_sel);
++        }
+ 
+-    /* Check and set ALT TTL function selector. */
+-    if (_FP_EXT_SELCODE_DONT_CARE != fg->ext_codes[index].alt_ttl_fn_sel) {
+-        soc_mem_field32_set(unit, lt_data_mem, data,
+-            ALT_TTL_FN_SELf, fg->ext_codes[index].alt_ttl_fn_sel);
++        /* Check and set ALT TTL function selector. */
++        if (_FP_EXT_SELCODE_DONT_CARE != fg->ext_codes[index].alt_ttl_fn_sel) {
++            soc_mem_field32_set(unit, lt_data_mem, data,
++                ALT_TTL_FN_SELf, fg->ext_codes[index].alt_ttl_fn_sel);
++        }
+     }
+ #endif
+diff --git a/src/bcm/esw/alpm2/alpm_wb.c b/src/bcm/esw/alpm2/alpm_wb.c
+index 7316d7f..09291bb 100755
+--- a/src/bcm/esw/alpm2/alpm_wb.c
++++ b/src/bcm/esw/alpm2/alpm_wb.c
+@@ -1011,7 +1011,7 @@
+         rv = bcm_esw_alpm_warmboot_walk(u, trv_data);
+         if (BCM_FAILURE(rv)) {
+             ALPM_ERR(("ERROR!  ALPM Warmboot recovery failed\n"));
+-            return (rv);
+         }
++        return (rv);
+     }
+ #endif
+
+--- sdk-xgs-robo-6.5.13.orig/src/soc/esw/tomahawk/ser.c
++++ sdk-xgs-robo-6.5.13/src/soc/esw/tomahawk/ser.c
+@@ -931,39 +931,12 @@ extern _soc_buffer_ser_en_info_t _soc_bc
+ extern _soc_bus_ser_en_info_t _soc_bcm56970_a0_ep_bus_ser_info[];
+ extern _soc_buffer_ser_en_info_t _soc_bcm56970_a0_ep_buffer_ser_info[];
+ 
+-
+-static _soc_th_ser_reg_t _soc_th2_idb_status_reg[] = {
+-    { IDB_OBM0_DATA_ECC_STATUSr, "IDB OBM0 packet data memory" },
+-    { IDB_OBM1_DATA_ECC_STATUSr, "IDB OBM1 packet data memory" },
+-    { IDB_OBM2_DATA_ECC_STATUSr, "IDB OBM2 packet data memory" },
+-    { IDB_OBM3_DATA_ECC_STATUSr, "IDB OBM3 packet data memory" },
+-    { IDB_OBM4_DATA_ECC_STATUSr, "IDB OBM4 packet data memory" },
+-    { IDB_OBM5_DATA_ECC_STATUSr, "IDB OBM5 packet data memory" },
+-    { IDB_OBM6_DATA_ECC_STATUSr, "IDB OBM6 packet data memory" },
+-    { IDB_OBM7_DATA_ECC_STATUSr, "IDB OBM7 packet data memory" },
+-    { IDB_OBM0_CA_ECC_STATUSr, "IDB OBM0 CA packet buffer memory" },
+-    { IDB_OBM1_CA_ECC_STATUSr, "IDB OBM1 CA packet buffer memory" },
+-    { IDB_OBM2_CA_ECC_STATUSr, "IDB OBM2 CA packet buffer memory" },
+-    { IDB_OBM3_CA_ECC_STATUSr, "IDB OBM3 CA packet buffer memory" },
+-    { IDB_OBM4_CA_ECC_STATUSr, "IDB OBM4 CA packet buffer memory" },
+-    { IDB_OBM5_CA_ECC_STATUSr, "IDB OBM5 CA packet buffer memory" },
+-    { IDB_OBM6_CA_ECC_STATUSr, "IDB OBM6 CA packet buffer memory" },
+-    { IDB_OBM7_CA_ECC_STATUSr, "IDB OBM7 CA packet buffer memory" },
+-    { IDB_IS_TDM_CAL_ECC_STATUSr, "IDB IS_TDM0,1 calendar" },
+-    { INVALIDr }
+-};
+-
+-/* OBM queue buffer */
+-static _soc_th_ser_reg_t _soc_th2_idb_status_reg2[] = {
+-    { IDB_OBM0_QUEUE_ECC_STATUSr, "IDB OBM0 queue FIFO memory" },
+-    { IDB_OBM1_QUEUE_ECC_STATUSr, "IDB OBM1 queue FIFO memory" },
+-    { IDB_OBM2_QUEUE_ECC_STATUSr, "IDB OBM2 queue FIFO memory" },
+-    { IDB_OBM3_QUEUE_ECC_STATUSr, "IDB OBM3 queue FIFO memory" },
+-    { IDB_OBM4_QUEUE_ECC_STATUSr, "IDB OBM4 queue FIFO memory" },
+-    { IDB_OBM5_QUEUE_ECC_STATUSr, "IDB OBM5 queue FIFO memory" },
+-    { IDB_OBM6_QUEUE_ECC_STATUSr, "IDB OBM6 queue FIFO memory" },
+-    { IDB_OBM7_QUEUE_ECC_STATUSr, "IDB OBM7 queue FIFO memory" },
+-    { INVALIDr }
++_soc_buffer_ser_en_info_t _soc_th2_ifp_buffer_ser_info[] = {
++    { "METER MUX DATA STAGING", IFP_PARITY_CONTROLr, METER_MUX_DATA_STAGING_PARITY_ENf, INVALIDr, INVALIDf },
++    { "PORT METER MAP", IFP_PARITY_CONTROLr, PORT_METER_MAP_PARITY_ENf, INVALIDr, INVALIDf },
++    { "COUNTER MUX DATA STAGING", IFP_PARITY_CONTROLr, COUNTER_MUX_DATA_STAGING_PARITY_ENf, INVALIDr, INVALIDf },
++    { "IFP COUNTER", IFP_PARITY_CONTROLr, COUNTER_PARITY_ENf, INVALIDr, INVALIDf },
++    { "", INVALIDr }
+ };
+ 
+ soc_field_t _soc_th2_idb_ca_lpbk_enable_fields[] = {
+@@ -991,20 +964,388 @@ soc_field_t _soc_th2_idb_eop_event_enabl
+ };
+ 
+ static _soc_th_ser_info_t _soc_th2_idb_ser_info[] = {
+-    { _SOC_PARITY_TYPE_ECC, NULL, 0, 
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
+         MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
+-        INVALIDm, "IP IDB memory",
++        INVALIDm, "OBM0 DATA FIFO",
++        IDB_OBM0_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
+         INVALIDr, INVALIDf, NULL,
++        IDB_OBM0_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM1 DATA FIFO",
++        IDB_OBM1_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
+         INVALIDr, INVALIDf, NULL,
+-        INVALIDr, _soc_th2_idb_status_reg2, ECC_ERRf, NULL,
++        IDB_OBM1_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
+         INVALIDr, INVALIDf, NULL
+     },
+-    { _SOC_PARITY_TYPE_ECC, NULL, 0, 
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
+         MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
+-        INVALIDm, "IP IDB memory",
++        INVALIDm, "OBM2 DATA FIFO",
++        IDB_OBM2_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM2_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM3 DATA FIFO",
++        IDB_OBM3_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM3_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM4 DATA FIFO",
++        IDB_OBM4_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM4_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM5 DATA FIFO",
++        IDB_OBM5_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM5_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM6 DATA FIFO",
++        IDB_OBM6_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM6_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM7 DATA FIFO",
++        IDB_OBM7_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM7_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM8 DATA FIFO",
++        IDB_OBM8_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM8_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM9 DATA FIFO",
++        IDB_OBM9_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM9_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM10 DATA FIFO",
++        IDB_OBM10_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM10_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM11 DATA FIFO",
++        IDB_OBM11_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
+         INVALIDr, INVALIDf, NULL,
++        IDB_OBM11_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM12 DATA FIFO",
++        IDB_OBM12_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM12_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM13 DATA FIFO",
++        IDB_OBM13_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM13_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM14 DATA FIFO",
++        IDB_OBM14_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
+         INVALIDr, INVALIDf, NULL,
+-        INVALIDr, _soc_th2_idb_status_reg, ECC_ERRf, NULL,
++        IDB_OBM14_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM15 DATA FIFO",
++        IDB_OBM15_SER_CONTROLr, DATA_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM15_DATA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM0 CELL ASSEM BUFFER",
++        IDB_OBM0_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM0_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM1 CELL ASSEM BUFFER",
++        IDB_OBM1_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM1_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++   { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM2 CELL ASSEM BUFFER",
++        IDB_OBM2_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM2_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM3 CELL ASSEM BUFFER",
++        IDB_OBM3_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM3_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM4 CELL ASSEM BUFFER",
++        IDB_OBM4_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM4_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM5 CELL ASSEM BUFFER",
++        IDB_OBM5_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM5_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM6 CELL ASSEM BUFFER",
++        IDB_OBM6_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM6_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM7 CELL ASSEM BUFFER",
++        IDB_OBM7_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM7_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM8 CELL ASSEM BUFFER",
++        IDB_OBM8_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM8_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM9 CELL ASSEM BUFFER",
++        IDB_OBM9_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM9_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM10 CELL ASSEM BUFFER",
++        IDB_OBM10_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM10_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM11 CELL ASSEM BUFFER",
++        IDB_OBM11_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM11_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM12 CELL ASSEM BUFFER",
++        IDB_OBM12_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM12_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM13 CELL ASSEM BUFFER",
++        IDB_OBM13_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM13_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM14 CELL ASSEM BUFFER",
++        IDB_OBM14_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM14_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM15 CELL ASSEM BUFFER",
++        IDB_OBM15_SER_CONTROLr, CA_FIFO_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM15_CA_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM0 OBM QUEUE FIFO",
++        IDB_OBM0_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM0_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM1 OBM QUEUE FIFO",
++        IDB_OBM1_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM1_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM2 OBM QUEUE FIFO",
++        IDB_OBM2_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM2_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM3 OBM QUEUE FIFO",
++        IDB_OBM3_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM3_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM4 OBM QUEUE FIFO",
++        IDB_OBM4_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM4_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM5 OBM QUEUE FIFO",
++        IDB_OBM5_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM5_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM6 OBM QUEUE FIFO",
++        IDB_OBM6_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM6_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM7 OBM QUEUE FIFO",
++        IDB_OBM7_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM7_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM8 OBM QUEUE FIFO",
++        IDB_OBM8_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM8_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM9 OBM QUEUE FIFO",
++        IDB_OBM9_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM9_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM10 OBM QUEUE FIFO",
++        IDB_OBM10_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM10_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM11 OBM QUEUE FIFO",
++        IDB_OBM11_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM11_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM12 OBM QUEUE FIFO",
++        IDB_OBM12_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM12_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM13 OBM QUEUE FIFO",
++        IDB_OBM13_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM13_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM14 OBM QUEUE FIFO",
++        IDB_OBM14_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM14_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
++        INVALIDr, INVALIDf, NULL
++    },
++    { _SOC_PARITY_TYPE_ECC, NULL, 0,
++        MEM_ERROR_OCCURREDf, MEM_ERROR_OCCURREDf,
++        INVALIDm, "OBM15 OBM QUEUE FIFO",
++        IDB_OBM15_SER_CONTROLr, QUEUE_ECC_ENABLEf, NULL,
++        INVALIDr, INVALIDf, NULL,
++        IDB_OBM15_QUEUE_ECC_STATUSr, NULL, ECC_ERRf, NULL,
+         INVALIDr, INVALIDf, NULL
+     },
+     { _SOC_PARITY_TYPE_ECC, NULL, 0,
+
+--- sdk/src/soc/esw/tomahawk/ser.c      2018-03-30 03:31:44.000000000 -0400
++++ sdk/src/soc/esw/tomahawk/ser.c      2018-08-17 15:47:12.878416000 -0400
+@@ -3471,6 +3471,9 @@
+         SOC_IF_ERROR_RETURN(soc_tomahawk_ser_block_enable(unit, enable, &cmic_rval3,
+             _SOC_TH_SER_TYPE_BUF, SOC_BLK_EPIPE, INVALIDr,
+             (void*) &_soc_bcm56970_a0_ep_buffer_ser_info));
++        SOC_IF_ERROR_RETURN(soc_tomahawk_ser_block_enable(unit, enable, &cmic_rval3,
++            _SOC_TH_SER_TYPE_BUF, SOC_BLK_EPIPE, INVALIDr,
++            (void*) &_soc_th2_ifp_buffer_ser_info));
+     }
+ #endif
+
+--- sdk/src/soc/esw/tomahawk/ser.c	2018-08-17 15:53:26.918947000 -0400
++++ sdk/src/soc/esw/tomahawk/ser.c  	2018-08-17 16:12:27.024047000 -0400
+@@ -3257,10 +3257,12 @@
+                 done = 1;
+             } else if (!SOC_MEM_IS_VALID(unit, mem_info[pcount].mem) ||
+                        (mem_info[pcount].mem == TRUNK_RR_CNTm) ||
++                       (SOC_IS_TOMAHAWK(unit) &&
++                       ((mem_info[pcount].mem == TRUNK_RR_CNTm) ||
+                        (mem_info[pcount].mem == TRUNK_RR_CNT_PIPE0m) ||
+                        (mem_info[pcount].mem == TRUNK_RR_CNT_PIPE1m) ||
+                        (mem_info[pcount].mem == TRUNK_RR_CNT_PIPE2m) ||
+-                       (mem_info[pcount].mem == TRUNK_RR_CNT_PIPE3m) ||
++                       (mem_info[pcount].mem == TRUNK_RR_CNT_PIPE3m))) ||
+                        (SOC_MEM_INFO(unit, mem_info[pcount].mem).flags &
+                         SOC_MEM_FLAG_SER_PARITY_ENABLE_SKIP)) {
+                 LOG_VERBOSE(BSL_LS_SOC_SER, (BSL_META_U(unit,
+
+--- sdk/src/soc/esw/trident2.c  2018-03-30 03:31:43.000000000 -0400
++++ sdk/src/soc/esw/trident2.c 	2018-08-20 15:24:25.429849000 -0400
+@@ -63,14 +63,21 @@ typedef enum {
+     _SOC_PARITY_TYPE_CFAP_MEM_FAIL
+ } _soc_td2_ser_info_type_t;
+ 
++typedef enum {
++    _SOC_SER_SOURCE_TYPE_MEM,
++    _SOC_SER_SOURCE_TYPE_REG,
++    _SOC_SER_SOURCE_TYPE_BUS,
++    _SOC_SER_SOURCE_TYPE_BUF,
++    _SOC_SER_SOURCE_TYPE_OTHER
++} _soc_td2_ser_source_type_t;
+ typedef struct _soc_td2_fifo_ser_info_s {
+-    soc_reg_t   enable_reg;
+-    soc_field_t enable_field;
+-    uint8       type; /* 0: mem, 1: reg, 2: bus ,3 : internal buffer */
+-    soc_mem_t   mem;
+-    soc_reg_t   reg;
+-    char        *name_str; /* Used when mem == INVALIDm or reg == INVALIDr or type == bus
+-                              (either not accessible or multiple) */
++    soc_reg_t                   enable_reg;
++    soc_field_t                 enable_field;
++    _soc_td2_ser_source_type_t  type; /* 0: mem, 1: reg, 2: bus ,3 : internal buffer */
++    soc_mem_t                   mem;
++    soc_reg_t                   reg;
++    char                        *name_str; /* Used when mem == INVALIDm or reg == INVALIDr or type == bus
++                                              (either not accessible or multiple) */
+ } _soc_td2_fifo_ser_info_t;
+ 
+ typedef struct _soc_td2_ser_block_info_s { 
+@@ -184,323 +191,323 @@ _soc_trident2_ser_mem_info_get(int unit,
+ 
+ STATIC
+ _soc_td2_fifo_ser_info_t _soc_td2_ep_ser_info[] = {
+-    { EFP_PARITY_CONTROLr, EFP_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "EFP BUS" },
+-    { EFP_PARITY_CONTROLr, PW_INIT_COUNTERS_PARITY_ENf, 0, EGR_PW_INIT_COUNTERSm, INVALIDr, "" },
+-    { EFP_PARITY_CONTROLr, METER_PARITY_ENf, 0, EFP_METER_TABLEm, INVALIDr, "" },
+-    { EFP_PARITY_CONTROLr, POLICY_PARITY_ENf, 0, EFP_POLICY_TABLEm, INVALIDr, "" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP15_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP15 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP14_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP14 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP13_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP13 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP12_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP12 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP11_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP11 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP10_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP10 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP9_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP9 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP8_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP8 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP7_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP7 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP6_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP6 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP5_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP5 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP4_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP4 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP3_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP3 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP2_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP2 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP1_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP1 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, XLP0_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP0 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, CLP3_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CLP3 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, CLP2_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CLP2 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, CLP1_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CLP1 CELL DATABUF" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, CLP0_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CLP0 CELL DATABUF" },
+-    /*{ EGR_EDATABUF_PARITY_CONTROLr, XLP_RESI_BUFFER_PAR_ENf, 0, INVALIDm, INVALIDr, "EP RESIDUE BUF" },*/
+-    { EGR_EDATABUF_PARITY_CONTROLr, CM_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CM" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, FCOE_DELIMITER_ERR_CNTR_PAR_ENf, 1, INVALIDm, EGR_FCOE_DELIMITER_ERROR_FRAMESr, "" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, FCOE_INVALID_CNTR_PAR_ENf, 1, INVALIDm, EGR_FCOE_INVALID_CRC_FRAMESr, "" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, PERQ_PAR_ENf, 0, EGR_PERQ_XMT_COUNTERSm, INVALIDr, "" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, EFPCTR_PAR_ENf, 0, EFP_COUNTER_TABLEm, INVALIDr, "" },
+-    { EGR_EDATABUF_PARITY_CONTROLr, STATS_PAR_ENf, 0, INVALIDm, INVALIDr, "TX DEBUG COUNTER" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP15_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP15 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP14_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP14 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP13_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP13 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP12_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP12 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP11_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP11 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP10_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP10 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP9_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP9 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP8_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP8 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP7_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP7 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP6_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP6 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP5_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP5 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP4_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP4 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP3_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP3 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP2_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP2 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP1_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP1 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, XLP0_ECC_ENf, 0, INVALIDm, INVALIDr, "EP XLP0 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, CLP3_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CLP3 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, CLP2_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CLP2 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, CLP1_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CLP1 DATABUF CONTROL INFO" },
+-    { EGR_EDB_CTRL_PARITY_ENr, CLP0_ECC_ENf, 0, INVALIDm, INVALIDr, "EP CLP0 DATABUF CONTROL INFO" },
+-    { EGR_FLEX_CTR_OFFSET_TABLE_CONTROL_0r, PARITY_ENf, 0, EGR_FLEX_CTR_OFFSET_TABLE_0m, INVALIDr, "" },
+-    { EGR_FLEX_CTR_OFFSET_TABLE_CONTROL_1r, PARITY_ENf, 0, EGR_FLEX_CTR_OFFSET_TABLE_1m, INVALIDr, "" },
+-    { EGR_FLEX_CTR_OFFSET_TABLE_CONTROL_2r, PARITY_ENf, 0, EGR_FLEX_CTR_OFFSET_TABLE_2m, INVALIDr, "" },
+-    { EGR_FLEX_CTR_OFFSET_TABLE_CONTROL_3r, PARITY_ENf, 0, EGR_FLEX_CTR_OFFSET_TABLE_3m, INVALIDr, "" },
+-    { EGR_FLEX_CTR_COUNTER_TABLE_CONTROL_0r, PARITY_ENf, 0, EGR_FLEX_CTR_COUNTER_TABLE_0m, INVALIDr, "" },
+-    { EGR_FLEX_CTR_COUNTER_TABLE_CONTROL_1r, PARITY_ENf, 0, EGR_FLEX_CTR_COUNTER_TABLE_1m, INVALIDr, "" },
+-    { EGR_FLEX_CTR_COUNTER_TABLE_CONTROL_2r, PARITY_ENf, 0, EGR_FLEX_CTR_COUNTER_TABLE_2m, INVALIDr, "" },
+-    { EGR_FLEX_CTR_COUNTER_TABLE_CONTROL_3r, PARITY_ENf, 0, EGR_FLEX_CTR_COUNTER_TABLE_3m, INVALIDr, "" },
+-    { EGR_EFPPARS_PARITY_CONTROLr, EGR_1588_LINK_DELAY_PARITY_ENf, 1, INVALIDm, EGR_1588_LINK_DELAY_64r, "" },
+-    { EGR_EFPPARS_PARITY_CONTROLr, EGR_1588_SA_PARITY_ENf, 0, EGR_1588_SAm, INVALIDr, "" },
+-    { EGR_EFPPARS_SER_CONTROLr, EFPPARS_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "EFPPARS BUS" },
+-    { EGR_EHCPM_ECC_PARITY_CONTROLr, SF_SRC_MODID_CHECK_PARITY_ENf, 1, INVALIDm, EGR_SF_SRC_MODID_CHECKr, "" },
+-    { EGR_EHCPM_ECC_PARITY_CONTROLr, MOD_MAP_PARITY_ENf, 0, EGR_MOD_MAP_TABLEm, INVALIDr, "" },
+-    { EGR_EHCPM_SER_CONTROLr, EHCPM_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "EHCPM BUS" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, INITBUF_ECC_ENf, 0, INVALIDm, INVALIDr, "INIT BUFF" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_NAT_PACKET_EDIT_INFO_PARITY_ENf, 0, EGR_NAT_PACKET_EDIT_INFOm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_MAP_MH_PARITY_ENf, 0, EGR_MAP_MHm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_MPB_ECC_ENf, 0, INVALIDm, INVALIDr, "EGR MPB" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_PORT_PARITY_ENf, 0, EGR_PORTm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_IPMC_PARITY_ENf, 0, EGR_IPMCm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_VFI_PARITY_ENf, 0, EGR_VFIm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_DVP_ATTRIBUTE_PARITY_ENf, 0, EGR_DVP_ATTRIBUTEm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_MAC_DA_PROFILE_PARITY_ENf, 0, EGR_MAC_DA_PROFILEm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_MPLS_VC_AND_SWAP_LABEL_TABLE_PARITY_ENf, 0, EGR_MPLS_VC_AND_SWAP_LABEL_TABLEm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_L3_INTF_PARITY_ENf, 0, EGR_L3_INTFm, INVALIDr, "" },
+-    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_L3_NEXT_HOP_PARITY_ENf, 0, EGR_L3_NEXT_HOPm, INVALIDr, "" },
+-    { EGR_EPMOD_SER_CONTROLr, EPMOD_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "EPMOD BUS" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_XLATE_PARITY_EN_LPf, 0, EGR_VLAN_XLATE_LPm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EVLAN_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "EVLAN BUS" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_TAG_ACTION_PROFILE_PARITY_ENf, 0, EGR_VLAN_TAG_ACTION_PROFILEm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_ETAG_PCP_MAPPING_PARITY_ENf, 0, EGR_ETAG_PCP_MAPPINGm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_CONTROL_3_PARITY_ENf, 1, INVALIDm, EGR_VLAN_CONTROL_3r, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_CONTROL_2_PARITY_ENf, 1, INVALIDm, EGR_VLAN_CONTROL_2r, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_PVLAN_EPORT_CONTROL_PARITY_ENf, 1, INVALIDm, EGR_PVLAN_EPORT_CONTROLr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VP_VLAN_MEMBERSHIP_PARITY_ENf, 0, EGR_VP_VLAN_MEMBERSHIPm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VPLAG_MEMBER_PARITY_ENf, 0, EGR_VPLAG_MEMBERm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VPLAG_GROUP_PARITY_ENf, 0, EGR_VPLAG_GROUPm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_MPLS_EXP_MAPPING_1_PARITY_ENf, 0, EGR_MPLS_EXP_MAPPING_1m, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_GPP_ATTRIBUTES_PARITY_ENf, 0, EGR_GPP_ATTRIBUTESm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_GPP_ATTRIBUTES_MODBASE_PARITY_ENf, 0, EGR_GPP_ATTRIBUTES_MODBASEm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_FRAGMENT_ID_TABLE_PARITY_ENf, 0, EGR_FRAGMENT_ID_TABLEm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_DSCP_TABLE_PARITY_ENf, 0, EGR_DSCP_TABLEm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_PRI_CNG_MAP_PARITY_ENf, 0, EGR_PRI_CNG_MAPm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_MPLS_PRI_MAPPING_PARITY_ENf, 0, EGR_MPLS_PRI_MAPPINGm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_MPLS_EXP_MAPPING_2_PARITY_ENf, 0, EGR_MPLS_EXP_MAPPING_2m, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_IP_TUNNEL_PARITY_ENf, 0, EGR_IP_TUNNELm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_XLATE_PARITY_ENf, 0, EGR_VLAN_XLATEm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_STG_PARITY_ENf, 0, EGR_VLAN_STGm, INVALIDr, "" },
+-    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_PARITY_ENf, 0, EGR_VLANm, INVALIDr, "" },
++    { EFP_PARITY_CONTROLr, EFP_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "EFP BUS" },
++    { EFP_PARITY_CONTROLr, PW_INIT_COUNTERS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_PW_INIT_COUNTERSm, INVALIDr, "" },
++    { EFP_PARITY_CONTROLr, METER_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EFP_METER_TABLEm, INVALIDr, "" },
++    { EFP_PARITY_CONTROLr, POLICY_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EFP_POLICY_TABLEm, INVALIDr, "" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP15_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP15 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP14_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP14 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP13_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP13 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP12_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP12 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP11_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP11 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP10_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP10 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP9_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP9 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP8_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP8 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP7_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP7 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP6_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP6 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP5_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP5 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP4_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP4 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP3_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP3 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP2_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP2 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP1_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP1 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, XLP0_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP0 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, CLP3_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP CLP3 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, CLP2_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP CLP2 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, CLP1_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP CLP1 CELL DATABUF" },
++    { EGR_EDATABUF_PARITY_CONTROLr, CLP0_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP CLP0 CELL DATABUF" },
++    /*{ EGR_EDATABUF_PARITY_CONTROLr, XLP_RESI_BUFFER_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, INVALIDm, INVALIDr, "EP RESIDUE BUF" },*/
++    { EGR_EDATABUF_PARITY_CONTROLr, CM_ECC_ENf, _SOC_SER_SOURCE_TYPE_OTHER, INVALIDm, INVALIDr, "EP CM" },
++    { EGR_EDATABUF_PARITY_CONTROLr, FCOE_DELIMITER_ERR_CNTR_PAR_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, EGR_FCOE_DELIMITER_ERROR_FRAMESr, "" },
++    { EGR_EDATABUF_PARITY_CONTROLr, FCOE_INVALID_CNTR_PAR_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, EGR_FCOE_INVALID_CRC_FRAMESr, "" },
++    { EGR_EDATABUF_PARITY_CONTROLr, PERQ_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_PERQ_XMT_COUNTERSm, INVALIDr, "" },
++    { EGR_EDATABUF_PARITY_CONTROLr, EFPCTR_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, EFP_COUNTER_TABLEm, INVALIDr, "" },
++    { EGR_EDATABUF_PARITY_CONTROLr, STATS_PAR_ENf, _SOC_SER_SOURCE_TYPE_OTHER, INVALIDm, INVALIDr, "TX DEBUG COUNTER" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP15_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP15 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP14_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP14 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP13_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP13 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP12_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP12 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP11_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP11 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP10_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP10 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP9_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP9 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP8_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP8 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP7_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP7 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP6_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP6 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP5_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP5 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP4_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP4 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP3_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP3 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP2_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP2 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP1_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP1 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, XLP0_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP XLP0 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, CLP3_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP CLP3 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, CLP2_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP CLP2 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, CLP1_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP CLP1 DATABUF CONTROL INFO" },
++    { EGR_EDB_CTRL_PARITY_ENr, CLP0_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EP CLP0 DATABUF CONTROL INFO" },
++    { EGR_FLEX_CTR_OFFSET_TABLE_CONTROL_0r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FLEX_CTR_OFFSET_TABLE_0m, INVALIDr, "" },
++    { EGR_FLEX_CTR_OFFSET_TABLE_CONTROL_1r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FLEX_CTR_OFFSET_TABLE_1m, INVALIDr, "" },
++    { EGR_FLEX_CTR_OFFSET_TABLE_CONTROL_2r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FLEX_CTR_OFFSET_TABLE_2m, INVALIDr, "" },
++    { EGR_FLEX_CTR_OFFSET_TABLE_CONTROL_3r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FLEX_CTR_OFFSET_TABLE_3m, INVALIDr, "" },
++    { EGR_FLEX_CTR_COUNTER_TABLE_CONTROL_0r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FLEX_CTR_COUNTER_TABLE_0m, INVALIDr, "" },
++    { EGR_FLEX_CTR_COUNTER_TABLE_CONTROL_1r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FLEX_CTR_COUNTER_TABLE_1m, INVALIDr, "" },
++    { EGR_FLEX_CTR_COUNTER_TABLE_CONTROL_2r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FLEX_CTR_COUNTER_TABLE_2m, INVALIDr, "" },
++    { EGR_FLEX_CTR_COUNTER_TABLE_CONTROL_3r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FLEX_CTR_COUNTER_TABLE_3m, INVALIDr, "" },
++    { EGR_EFPPARS_PARITY_CONTROLr, EGR_1588_LINK_DELAY_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, EGR_1588_LINK_DELAY_64r, "" },
++    { EGR_EFPPARS_PARITY_CONTROLr, EGR_1588_SA_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_1588_SAm, INVALIDr, "" },
++    { EGR_EFPPARS_SER_CONTROLr, EFPPARS_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "EFPPARS BUS" },
++    { EGR_EHCPM_ECC_PARITY_CONTROLr, SF_SRC_MODID_CHECK_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, EGR_SF_SRC_MODID_CHECKr, "" },
++    { EGR_EHCPM_ECC_PARITY_CONTROLr, MOD_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MOD_MAP_TABLEm, INVALIDr, "" },
++    { EGR_EHCPM_SER_CONTROLr, EHCPM_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "EHCPM BUS" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, INITBUF_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "INIT BUFF" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_NAT_PACKET_EDIT_INFO_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_NAT_PACKET_EDIT_INFOm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_MAP_MH_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MAP_MHm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_MPB_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "EGR MPB" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_PORT_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_PORTm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_IPMC_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_IPMCm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_VFI_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VFIm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_DVP_ATTRIBUTE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_DVP_ATTRIBUTEm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_MAC_DA_PROFILE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MAC_DA_PROFILEm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_MPLS_VC_AND_SWAP_LABEL_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MPLS_VC_AND_SWAP_LABEL_TABLEm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_L3_INTF_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_L3_INTFm, INVALIDr, "" },
++    { EGR_EL3_ECC_PARITY_CONTROLr, EGR_L3_NEXT_HOP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_L3_NEXT_HOPm, INVALIDr, "" },
++    { EGR_EPMOD_SER_CONTROLr, EPMOD_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "EPMOD BUS" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_XLATE_PARITY_EN_LPf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VLAN_XLATE_LPm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EVLAN_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "EVLAN BUS" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_TAG_ACTION_PROFILE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VLAN_TAG_ACTION_PROFILEm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_ETAG_PCP_MAPPING_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_ETAG_PCP_MAPPINGm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_CONTROL_3_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, EGR_VLAN_CONTROL_3r, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_CONTROL_2_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, EGR_VLAN_CONTROL_2r, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_PVLAN_EPORT_CONTROL_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, EGR_PVLAN_EPORT_CONTROLr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VP_VLAN_MEMBERSHIP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VP_VLAN_MEMBERSHIPm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VPLAG_MEMBER_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VPLAG_MEMBERm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VPLAG_GROUP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VPLAG_GROUPm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_MPLS_EXP_MAPPING_1_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MPLS_EXP_MAPPING_1m, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_GPP_ATTRIBUTES_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_GPP_ATTRIBUTESm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_GPP_ATTRIBUTES_MODBASE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_GPP_ATTRIBUTES_MODBASEm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_FRAGMENT_ID_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_FRAGMENT_ID_TABLEm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_DSCP_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_DSCP_TABLEm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_PRI_CNG_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_PRI_CNG_MAPm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_MPLS_PRI_MAPPING_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MPLS_PRI_MAPPINGm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_MPLS_EXP_MAPPING_2_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MPLS_EXP_MAPPING_2m, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_IP_TUNNEL_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_IP_TUNNELm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_XLATE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VLAN_XLATEm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_STG_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VLAN_STGm, INVALIDr, "" },
++    { EGR_VLAN_SER_CONTROLr, EGR_VLAN_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_VLANm, INVALIDr, "" },
+     { INVALIDr }
+ };
+ 
+ STATIC
+ _soc_td2_fifo_ser_info_t _soc_td2_ip_ser_info[] = {
+-    { CFG_SER_CONTROLr, PORT_TABLE_ECC_ENf, 0, PORT_TABm, INVALIDr, "" },
+-    { CFG_SER_CONTROLr, SYSTEM_CONFIG_TABLE_PAR_ENf, 0, SYSTEM_CONFIG_TABLEm, INVALIDr, "" },
+-    { CFG_SER_CONTROLr, SYSTEM_CONFIG_TABLE_MODBASE_PAR_ENf, 0, SYSTEM_CONFIG_TABLE_MODBASEm, INVALIDr, "" },
+-    { CFG_SER_CONTROLr, SOURCE_TRUNK_MAP_MODBASE_PAR_ENf, 0, SOURCE_TRUNK_MAP_MODBASEm, INVALIDr, "" },
++    { CFG_SER_CONTROLr, PORT_TABLE_ECC_ENf, _SOC_SER_SOURCE_TYPE_MEM, PORT_TABm, INVALIDr, "" },
++    { CFG_SER_CONTROLr, SYSTEM_CONFIG_TABLE_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, SYSTEM_CONFIG_TABLEm, INVALIDr, "" },
++    { CFG_SER_CONTROLr, SYSTEM_CONFIG_TABLE_MODBASE_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, SYSTEM_CONFIG_TABLE_MODBASEm, INVALIDr, "" },
++    { CFG_SER_CONTROLr, SOURCE_TRUNK_MAP_MODBASE_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, SOURCE_TRUNK_MAP_MODBASEm, INVALIDr, "" },
+     /* NOTE: Read does not get the correct value for this reg */
+-    { DLB_HGT_SER_CONTROLr, DLB_HGT_FLOWSET_TIMESTAMP_PAGE_PARITY_ENf, 0, DLB_HGT_FLOWSET_TIMESTAMP_PAGEm, INVALIDr, "" }, 
+-    { DLB_HGT_SER_CONTROLr, DLB_HGT_FLOWSET_PARITY_ENf, 0, DLB_HGT_FLOWSETm, INVALIDr, "" },
+-    { IARB_SER_CONTROLr, LEARN_FIFO_ECC_ENf, 3, INVALIDm, INVALIDr, "IARB LEARN FIFO" },
+-    { IARB_SER_CONTROLr, CMIC_BUF_ECC_ENf, 3, INVALIDm, INVALIDr, "CMIC BUFFER" },
+-    { IFP_PARITY_CONTROLr, IFP_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "IFP BUS" },
+-    /*{ IFP_PARITY_CONTROLr, COUNTER_MUX_DATA_STAGING_PARITY_ENf, 0, INVALIDm, INVALIDr, "COUNTER MUX DATA STAGING" }, HOW TO CLEAR */
+-    /*{ IFP_PARITY_CONTROLr, METER_MUX_DATA_STAGING_PARITY_ENf, 0, INVALIDm, INVALIDr, "METER MUX DATA STAGING" }, HOW TO CLEAR */
+-    { IFP_PARITY_CONTROLr, PORT_METER_MAP_PARITY_ENf, 0, FP_PORT_METER_MAPm, INVALIDr, "" },
+-    { IFP_PARITY_CONTROLr, ING_DVP_2_PARITY_ENf, 0, ING_DVP_2_TABLEm, INVALIDr, "" },
+-    { IFP_PARITY_CONTROLr, STORM_PARITY_ENf, 0, FP_STORM_CONTROL_METERSm, INVALIDr, "" },
+-    { IFP_PARITY_CONTROLr, COUNTER_PARITY_ENf, 0, FP_COUNTER_TABLEm, INVALIDr, "" },
+-    { IFP_PARITY_CONTROLr, METER_PARITY_ENf, 0, FP_METER_TABLEm, INVALIDr, "" },
+-    { IFP_PARITY_CONTROLr, POLICY_PARITY_ENf, 0, FP_POLICY_TABLEm, INVALIDr, "" },
+-    { IL2L3_BUS_SER_CONTROLr, PARITY_ENf, 2, INVALIDm, INVALIDr, "IL2L3 BUS" },
+-    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, 0, L3_DEFIP_ALPM_IPV6_128m, INVALIDr, "" },
+-    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, 0, L3_DEFIP_ALPM_IPV6_64_1m, INVALIDr, "" },
+-    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, 0, L3_DEFIP_ALPM_IPV6_64m, INVALIDr, "" },
+-    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, 0, L3_DEFIP_ALPM_IPV4_1m, INVALIDr, "" },
+-    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, 0, L3_DEFIP_ALPM_IPV4m, INVALIDr, "" },
+-    /* { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, 0, INVALIDm, INVALIDr, "L3 DEFIP ALPM IPV4/_1/IPV6_64/_64_1/_128" } */
+-    { ILPM_SER_CONTROLr, L3_DEFIP_AUX_PARITY_ENf, 0, L3_DEFIP_AUX_TABLEm, INVALIDr, "" },
+-    { ILPM_SER_CONTROLr, L3_DEFIP_DATA_PARITY_ENf, 0, L3_DEFIP_DATA_ONLYm, INVALIDr, "" },
+-    { ILPM_SER_CONTROLr, L3_DEFIP_DATA_PARITY_ENf, 0, L3_DEFIP_PAIR_128_DATA_ONLYm, INVALIDr, "" },
+-    { ILPM_SER_CONTROL_1r, RTAG7_PORT_BASED_HASH_PARITY_ENf, 0, RTAG7_PORT_BASED_HASHm, INVALIDr, "" },
+-    { ILPM_SER_CONTROL_1r, RTAG7_FLOW_BASED_HASH_PARITY_ENf, 0, RTAG7_FLOW_BASED_HASHm, INVALIDr, "" },
+-    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_0r, PARITY_ENf, 0, ING_FLEX_CTR_OFFSET_TABLE_0m, INVALIDr, "" },
+-    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_1r, PARITY_ENf, 0, ING_FLEX_CTR_OFFSET_TABLE_1m, INVALIDr, "" },
+-    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_2r, PARITY_ENf, 0, ING_FLEX_CTR_OFFSET_TABLE_2m, INVALIDr, "" },
+-    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_3r, PARITY_ENf, 0, ING_FLEX_CTR_OFFSET_TABLE_3m, INVALIDr, "" },
+-    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_4r, PARITY_ENf, 0, ING_FLEX_CTR_OFFSET_TABLE_4m, INVALIDr, "" },
+-    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_5r, PARITY_ENf, 0, ING_FLEX_CTR_OFFSET_TABLE_5m, INVALIDr, "" },
+-    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_6r, PARITY_ENf, 0, ING_FLEX_CTR_OFFSET_TABLE_6m, INVALIDr, "" },
+-    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_7r, PARITY_ENf, 0, ING_FLEX_CTR_OFFSET_TABLE_7m, INVALIDr, "" },
+-    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_0r, PARITY_ENf, 0, ING_FLEX_CTR_COUNTER_TABLE_0m, INVALIDr, "" },
+-    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_1r, PARITY_ENf, 0, ING_FLEX_CTR_COUNTER_TABLE_1m, INVALIDr, "" },
+-    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_2r, PARITY_ENf, 0, ING_FLEX_CTR_COUNTER_TABLE_2m, INVALIDr, "" },
+-    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_3r, PARITY_ENf, 0, ING_FLEX_CTR_COUNTER_TABLE_3m, INVALIDr, "" },
+-    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_4r, PARITY_ENf, 0, ING_FLEX_CTR_COUNTER_TABLE_4m, INVALIDr, "" },
+-    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_5r, PARITY_ENf, 0, ING_FLEX_CTR_COUNTER_TABLE_5m, INVALIDr, "" },
+-    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_6r, PARITY_ENf, 0, ING_FLEX_CTR_COUNTER_TABLE_6m, INVALIDr, "" },
+-    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_7r, PARITY_ENf, 0, ING_FLEX_CTR_COUNTER_TABLE_7m, INVALIDr, "" },
+-    { IPARS_SER_CONTROLr, IPARS_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "IARS BUS" },
+-    { IPARS_SER_CONTROLr, SRC_VP_2_PARITY_ENf, 0, SOURCE_VP_2m, INVALIDr, "" },
+-    { IPARS_SER_CONTROLr, SRC_TRUNK_ECC_ENf, 0, SOURCE_TRUNK_MAP_TABLEm, INVALIDr, "" },
+-    { IPARS_SER_CONTROLr, L3_TUNNEL_PARITY_ENf, 0, L3_TUNNEL_DATA_ONLYm, INVALIDr, "" },
+-    { IPARS_SER_CONTROLr, FP_UDF_PARITY_ENf, 0, FP_UDF_OFFSETm, INVALIDr, "" },
+-    { IPARS_SER_CONTROLr, MOD_MAP_PARITY_ENf, 0, ING_MOD_MAP_TABLEm, INVALIDr, "" },
+-    { IPARS_SER_CONTROLr, LPORT_TABLE_ECC_ENf, 0, LPORT_TABm, INVALIDr, "" },
+-    { IPARS_SER_CONTROLr, CPU_TS_PARITY_ENf, 0, CPU_TS_MAPm, INVALIDr, "" },
+-    { IPARS_SER_CONTROLr, VLAN_RANGE_PARITY_ENf, 0, ING_VLAN_RANGEm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, INITIAL_ING_L3_NEXT_HOP_PARITY_ENf, 0, INITIAL_ING_L3_NEXT_HOPm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, INITIAL_L3_ECMP_GROUP_PARITY_ENf, 0, INITIAL_L3_ECMP_GROUPm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, INITIAL_L3_ECMP_PARITY_ENf, 0, INITIAL_L3_ECMPm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, OAM_OPCODE_CONTROL_PROFILE_PARITY_ENf, 0, OAM_OPCODE_CONTROL_PROFILEm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, INITIAL_PROT_NHI_TABLE_PARITY_ENf, 0, INITIAL_PROT_NHI_TABLEm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, PORT_CBL_TABLE_PARITY_ENf, 0, PORT_CBL_TABLEm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, TRUNK_CBL_TABLE_PARITY_ENf, 0, TRUNK_CBL_TABLEm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, PORT_CBL_TABLE_MODBASE_PARITY_ENf, 0, PORT_CBL_TABLE_MODBASEm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, L3_IPMC_1_PARITY_ENf, 0, L3_IPMC_1m, INVALIDr, "" },
+-/*    { IRSEL1_SER_CONTROLr, MAID_REDUCTION_PARITY_ENf, 0, MAID_REDUCTIONm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, MA_INDEX_PARITY_ENf, 0, MA_INDEXm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, MA_STATE_PARITY_ENf, 0, MA_STATEm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, RMEP_PARITY_ENf, 0, RMEPm, INVALIDr, "" },*/
+-    { IRSEL1_SER_CONTROLr, ING_1588_INGRESS_CTRL_PARITY_ENf, 0, ING_1588_INGRESS_CTRLm, INVALIDr, "" },
+-    { IRSEL1_SER_CONTROLr, IRSEL1_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "IRSEL1 BUS" },
+-    { IRSEL2_SER_CONTROLr, ING_L3_NEXT_HOP_PARITY_ENf, 0, ING_L3_NEXT_HOPm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, L2MC_PARITY_ENf, 0, L2MCm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, L3_IPMC_PARITY_ENf, 0, L3_IPMCm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, L3_IPMC_REMAP_PARITY_ENf, 0, L3_IPMC_REMAPm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, L3_ECMP_GROUP_PARITY_ENf, 0, L3_ECMP_COUNTm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, L3_ECMP_PARITY_ENf, 0, L3_ECMPm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, IFP_REDIRECTION_PROFILE_PARITY_ENf, 0, IFP_REDIRECTION_PROFILEm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, ICONTROL_OPCODE_BITMAP_PARITY_ENf, 0, ICONTROL_OPCODE_BITMAPm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, EGR_MASK_MODBASE_PARITY_ENf, 0, EGR_MASK_MODBASEm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, DEST_TRUNK_BITMAP_PARITY_ENf, 0, DEST_TRUNK_BITMAPm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, TRUNK_GROUP_PARITY_ENf, 0, TRUNK_GROUPm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, RH_ECMP_FLOWSET_PARITY_ENf, 0, RH_ECMP_FLOWSETm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, RH_LAG_FLOWSET_PARITY_ENf, 0, RH_LAG_FLOWSETm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, ING_SNAT_DATA_ONLY_PARITY_ENf, 0, ING_SNAT_DATA_ONLYm, INVALIDr, "" },
+-    { IRSEL2_SER_CONTROLr, IRSEL2_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "IRSEL2 BUS" },
+-    { ISW1_SER_CONTROLr, FP_PORT_FIELD_SEL_PARITY_ENf, 0, FP_PORT_FIELD_SELm, INVALIDr, "" },
+-    { ISW1_SER_CONTROLr, TTL_FN_PARITY_ENf, 0, TTL_FNm, INVALIDr, "" },
+-    { ISW1_SER_CONTROLr, TOS_FN_PARITY_ENf, 0, TOS_FNm, INVALIDr, "" },
+-    { ISW1_SER_CONTROLr, ING_PRI_CNG_MAP_PARITY_ENf, 0, ING_PRI_CNG_MAPm, INVALIDr, "" },
+-    { ISW1_SER_CONTROLr, ING_UNTAGGED_PHB_PARITY_ENf, 0, ING_UNTAGGED_PHBm, INVALIDr, "" },
+-    { ISW1_SER_CONTROLr, DSCP_TABLE_PARITY_ENf, 0, DSCP_TABLEm, INVALIDr, "" },
+-    { ISW1_SER_CONTROLr, STORM_CONTROL_METER_CONFIG_PARITY_ENf, 1, INVALIDm, STORM_CONTROL_METER_CONFIGr, "" },
+-    { ISW1_SER_CONTROLr, FCOE_HOP_COUNT_FN_PARITY_ENf, 0, FCOE_HOP_COUNT_FNm, INVALIDr, "" },
+-    { ISW1_SER_CONTROLr, ISW1_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "ISW1 BUS" },
+-    { ISW2_SER_CONTROL_0r, VOQ_PORT_MAP_PARITY_ENf, 0, VOQ_PORT_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, VOQ_MOD_MAP_PARITY_ENf, 0, VOQ_MOD_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, TRUNK_MEMBER_PARITY_ENf, 0, TRUNK_MEMBERm, INVALIDr, "" },
+-    /*{ ISW2_SER_CONTROL_0r, DLB_HGT_FLOWSET_TIMESTAMP_PAGE_PARITY_ENf, 0, DLB_HGT_FLOWSET_TIMESTAMP_PAGEm, 
++    { DLB_HGT_SER_CONTROLr, DLB_HGT_FLOWSET_TIMESTAMP_PAGE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, DLB_HGT_FLOWSET_TIMESTAMP_PAGEm, INVALIDr, "" }, 
++    { DLB_HGT_SER_CONTROLr, DLB_HGT_FLOWSET_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, DLB_HGT_FLOWSETm, INVALIDr, "" },
++    { IARB_SER_CONTROLr, LEARN_FIFO_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "IARB LEARN FIFO" },
++    { IARB_SER_CONTROLr, CMIC_BUF_ECC_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "CMIC BUFFER" },
++    { IFP_PARITY_CONTROLr, IFP_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "IFP BUS" },
++    /*{ IFP_PARITY_CONTROLr, COUNTER_MUX_DATA_STAGING_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, INVALIDm, INVALIDr, "COUNTER MUX DATA STAGING" }, HOW TO CLEAR */
++    /*{ IFP_PARITY_CONTROLr, METER_MUX_DATA_STAGING_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, INVALIDm, INVALIDr, "METER MUX DATA STAGING" }, HOW TO CLEAR */
++    { IFP_PARITY_CONTROLr, PORT_METER_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, FP_PORT_METER_MAPm, INVALIDr, "" },
++    { IFP_PARITY_CONTROLr, ING_DVP_2_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_DVP_2_TABLEm, INVALIDr, "" },
++    { IFP_PARITY_CONTROLr, STORM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, FP_STORM_CONTROL_METERSm, INVALIDr, "" },
++    { IFP_PARITY_CONTROLr, COUNTER_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, FP_COUNTER_TABLEm, INVALIDr, "" },
++    { IFP_PARITY_CONTROLr, METER_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, FP_METER_TABLEm, INVALIDr, "" },
++    { IFP_PARITY_CONTROLr, POLICY_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, FP_POLICY_TABLEm, INVALIDr, "" },
++    { IL2L3_BUS_SER_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "IL2L3 BUS" },
++    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_DEFIP_ALPM_IPV6_128m, INVALIDr, "" },
++    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_DEFIP_ALPM_IPV6_64_1m, INVALIDr, "" },
++    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_DEFIP_ALPM_IPV6_64m, INVALIDr, "" },
++    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_DEFIP_ALPM_IPV4_1m, INVALIDr, "" },
++    { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_DEFIP_ALPM_IPV4m, INVALIDr, "" },
++    /* { ILPM_SER_CONTROLr, L3_DEFIP_ALPM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, INVALIDm, INVALIDr, "L3 DEFIP ALPM IPV4/_1/IPV6_64/_64_1/_128" } */
++    { ILPM_SER_CONTROLr, L3_DEFIP_AUX_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_DEFIP_AUX_TABLEm, INVALIDr, "" },
++    { ILPM_SER_CONTROLr, L3_DEFIP_DATA_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_DEFIP_DATA_ONLYm, INVALIDr, "" },
++    { ILPM_SER_CONTROLr, L3_DEFIP_DATA_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_DEFIP_PAIR_128_DATA_ONLYm, INVALIDr, "" },
++    { ILPM_SER_CONTROL_1r, RTAG7_PORT_BASED_HASH_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, RTAG7_PORT_BASED_HASHm, INVALIDr, "" },
++    { ILPM_SER_CONTROL_1r, RTAG7_FLOW_BASED_HASH_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, RTAG7_FLOW_BASED_HASHm, INVALIDr, "" },
++    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_0r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_OFFSET_TABLE_0m, INVALIDr, "" },
++    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_1r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_OFFSET_TABLE_1m, INVALIDr, "" },
++    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_2r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_OFFSET_TABLE_2m, INVALIDr, "" },
++    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_3r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_OFFSET_TABLE_3m, INVALIDr, "" },
++    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_4r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_OFFSET_TABLE_4m, INVALIDr, "" },
++    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_5r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_OFFSET_TABLE_5m, INVALIDr, "" },
++    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_6r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_OFFSET_TABLE_6m, INVALIDr, "" },
++    { ING_FLEX_CTR_OFFSET_TABLE_CONTROL_7r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_OFFSET_TABLE_7m, INVALIDr, "" },
++    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_0r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_COUNTER_TABLE_0m, INVALIDr, "" },
++    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_1r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_COUNTER_TABLE_1m, INVALIDr, "" },
++    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_2r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_COUNTER_TABLE_2m, INVALIDr, "" },
++    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_3r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_COUNTER_TABLE_3m, INVALIDr, "" },
++    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_4r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_COUNTER_TABLE_4m, INVALIDr, "" },
++    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_5r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_COUNTER_TABLE_5m, INVALIDr, "" },
++    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_6r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_COUNTER_TABLE_6m, INVALIDr, "" },
++    { ING_FLEX_CTR_COUNTER_TABLE_CONTROL_7r, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_COUNTER_TABLE_7m, INVALIDr, "" },
++    { IPARS_SER_CONTROLr, IPARS_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "IARS BUS" },
++    { IPARS_SER_CONTROLr, SRC_VP_2_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, SOURCE_VP_2m, INVALIDr, "" },
++    { IPARS_SER_CONTROLr, SRC_TRUNK_ECC_ENf, _SOC_SER_SOURCE_TYPE_MEM, SOURCE_TRUNK_MAP_TABLEm, INVALIDr, "" },
++    { IPARS_SER_CONTROLr, L3_TUNNEL_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_TUNNEL_DATA_ONLYm, INVALIDr, "" },
++    { IPARS_SER_CONTROLr, FP_UDF_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, FP_UDF_OFFSETm, INVALIDr, "" },
++    { IPARS_SER_CONTROLr, MOD_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_MOD_MAP_TABLEm, INVALIDr, "" },
++    { IPARS_SER_CONTROLr, LPORT_TABLE_ECC_ENf, _SOC_SER_SOURCE_TYPE_MEM, LPORT_TABm, INVALIDr, "" },
++    { IPARS_SER_CONTROLr, CPU_TS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, CPU_TS_MAPm, INVALIDr, "" },
++    { IPARS_SER_CONTROLr, VLAN_RANGE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_VLAN_RANGEm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, INITIAL_ING_L3_NEXT_HOP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, INITIAL_ING_L3_NEXT_HOPm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, INITIAL_L3_ECMP_GROUP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, INITIAL_L3_ECMP_GROUPm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, INITIAL_L3_ECMP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, INITIAL_L3_ECMPm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, OAM_OPCODE_CONTROL_PROFILE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, OAM_OPCODE_CONTROL_PROFILEm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, INITIAL_PROT_NHI_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, INITIAL_PROT_NHI_TABLEm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, PORT_CBL_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, PORT_CBL_TABLEm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, TRUNK_CBL_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, TRUNK_CBL_TABLEm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, PORT_CBL_TABLE_MODBASE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, PORT_CBL_TABLE_MODBASEm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, L3_IPMC_1_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_IPMC_1m, INVALIDr, "" },
++/*    { IRSEL1_SER_CONTROLr, MAID_REDUCTION_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MAID_REDUCTIONm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, MA_INDEX_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MA_INDEXm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, MA_STATE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MA_STATEm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, RMEP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, RMEPm, INVALIDr, "" },*/
++    { IRSEL1_SER_CONTROLr, ING_1588_INGRESS_CTRL_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_1588_INGRESS_CTRLm, INVALIDr, "" },
++    { IRSEL1_SER_CONTROLr, IRSEL1_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "IRSEL1 BUS" },
++    { IRSEL2_SER_CONTROLr, ING_L3_NEXT_HOP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_L3_NEXT_HOPm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, L2MC_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L2MCm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, L3_IPMC_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_IPMCm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, L3_IPMC_REMAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_IPMC_REMAPm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, L3_ECMP_GROUP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_ECMP_COUNTm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, L3_ECMP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_ECMPm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, IFP_REDIRECTION_PROFILE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, IFP_REDIRECTION_PROFILEm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, ICONTROL_OPCODE_BITMAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ICONTROL_OPCODE_BITMAPm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, EGR_MASK_MODBASE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MASK_MODBASEm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, DEST_TRUNK_BITMAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, DEST_TRUNK_BITMAPm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, TRUNK_GROUP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, TRUNK_GROUPm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, RH_ECMP_FLOWSET_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, RH_ECMP_FLOWSETm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, RH_LAG_FLOWSET_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, RH_LAG_FLOWSETm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, ING_SNAT_DATA_ONLY_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_SNAT_DATA_ONLYm, INVALIDr, "" },
++    { IRSEL2_SER_CONTROLr, IRSEL2_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "IRSEL2 BUS" },
++    { ISW1_SER_CONTROLr, FP_PORT_FIELD_SEL_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, FP_PORT_FIELD_SELm, INVALIDr, "" },
++    { ISW1_SER_CONTROLr, TTL_FN_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, TTL_FNm, INVALIDr, "" },
++    { ISW1_SER_CONTROLr, TOS_FN_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, TOS_FNm, INVALIDr, "" },
++    { ISW1_SER_CONTROLr, ING_PRI_CNG_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_PRI_CNG_MAPm, INVALIDr, "" },
++    { ISW1_SER_CONTROLr, ING_UNTAGGED_PHB_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_UNTAGGED_PHBm, INVALIDr, "" },
++    { ISW1_SER_CONTROLr, DSCP_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, DSCP_TABLEm, INVALIDr, "" },
++    { ISW1_SER_CONTROLr, STORM_CONTROL_METER_CONFIG_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, STORM_CONTROL_METER_CONFIGr, "" },
++    { ISW1_SER_CONTROLr, FCOE_HOP_COUNT_FN_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, FCOE_HOP_COUNT_FNm, INVALIDr, "" },
++    { ISW1_SER_CONTROLr, ISW1_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "ISW1 BUS" },
++    { ISW2_SER_CONTROL_0r, VOQ_PORT_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VOQ_PORT_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, VOQ_MOD_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VOQ_MOD_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, TRUNK_MEMBER_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, TRUNK_MEMBERm, INVALIDr, "" },
++    /*{ ISW2_SER_CONTROL_0r, DLB_HGT_FLOWSET_TIMESTAMP_PAGE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, DLB_HGT_FLOWSET_TIMESTAMP_PAGEm, 
+       INVALIDr, "" }, DUPLICATE */
+-    { ISW2_SER_CONTROL_0r, UNKNOWN_HGI_BITMAP_PARITY_ENf, 0, UNKNOWN_HGI_BITMAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, IMIRROR_BITMAP_PARITY_ENf, 0, IMIRROR_BITMAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, KNOWN_MCAST_BLOCK_MASK_PARITY_ENf, 0, KNOWN_MCAST_BLOCK_MASKm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, ING_EGRMSKBMAP_PARITY_ENf, 0, ING_EGRMSKBMAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, BCAST_BLOCK_MASK_PARITY_ENf, 0, BCAST_BLOCK_MASKm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, UNKNOWN_MCAST_BLOCK_MASK_PARITY_ENf, 0, UNKNOWN_MCAST_BLOCK_MASKm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, UNKNOWN_UCAST_BLOCK_MASK_PARITY_ENf, 0, UNKNOWN_UCAST_BLOCK_MASKm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, LOCAL_SW_DISABLE_DEFAULT_PBM_MIRR_PARITY_ENf, 0, LOCAL_SW_DISABLE_DEFAULT_PBM_MIRRm, 
++    { ISW2_SER_CONTROL_0r, UNKNOWN_HGI_BITMAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, UNKNOWN_HGI_BITMAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, IMIRROR_BITMAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, IMIRROR_BITMAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, KNOWN_MCAST_BLOCK_MASK_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, KNOWN_MCAST_BLOCK_MASKm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, ING_EGRMSKBMAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_EGRMSKBMAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, BCAST_BLOCK_MASK_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, BCAST_BLOCK_MASKm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, UNKNOWN_MCAST_BLOCK_MASK_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, UNKNOWN_MCAST_BLOCK_MASKm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, UNKNOWN_UCAST_BLOCK_MASK_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, UNKNOWN_UCAST_BLOCK_MASKm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, LOCAL_SW_DISABLE_DEFAULT_PBM_MIRR_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, LOCAL_SW_DISABLE_DEFAULT_PBM_MIRRm, 
+       INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, LOCAL_SW_DISABLE_DEFAULT_PBM_PARITY_ENf, 0, LOCAL_SW_DISABLE_DEFAULT_PBMm, INVALIDr, "" },
+-    /*{ ISW2_SER_CONTROL_0r, VOQ_COS_MAP_PARITY_ENf, 0, VOQ_COS_MAPm, INVALIDr, "" }, NA */
+-    { ISW2_SER_CONTROL_0r, NUM_QCN_CNM_RECEIVED_PARITY_ENf, 0, NUM_QCN_CNM_RECEIVEDm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, OAM_LM_COUNTERS_PARITY_ENf, 0, OAM_LM_COUNTERSm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, SRC_MODID_EGRESS_PARITY_ENf, 0, SRC_MODID_EGRESSm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, SRC_MODID_INGRESS_BLOCK_PARITY_ENf, 0, SRC_MODID_INGRESS_BLOCKm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, E2E_HOL_STATUS_1_PARITY_ENf, 0, E2E_HOL_STATUS_1m, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, E2E_HOL_STATUS_PARITY_ENf, 0, E2E_HOL_STATUSm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, VLAN_PROFILE_2_PARITY_ENf, 0, VLAN_PROFILE_2m, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, MAC_BLOCK_TABLE_PARITY_ENf, 0, MAC_BLOCKm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, ING_PW_TERM_SEQ_NUM_PARITY_ENf, 0, ING_PW_TERM_SEQ_NUMm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, ALTERNATE_EMIRROR_BITMAP_PARITY_ENf, 0, ALTERNATE_EMIRROR_BITMAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, MODPORT_MAP_MIRROR_PARITY_ENf, 0, MODPORT_MAP_MIRRORm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, PORT_LAG_FAILOVER_SET_PARITY_ENf, 0, PORT_LAG_FAILOVER_SETm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, ING_HIGIG_TRUNK_OVERRIDE_PROFILE_PARITY_ENf, 0, ING_HIGIG_TRUNK_OVERRIDE_PROFILEm, 
++    { ISW2_SER_CONTROL_0r, LOCAL_SW_DISABLE_DEFAULT_PBM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, LOCAL_SW_DISABLE_DEFAULT_PBMm, INVALIDr, "" },
++    /*{ ISW2_SER_CONTROL_0r, VOQ_COS_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VOQ_COS_MAPm, INVALIDr, "" }, NA */
++    { ISW2_SER_CONTROL_0r, NUM_QCN_CNM_RECEIVED_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, NUM_QCN_CNM_RECEIVEDm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, OAM_LM_COUNTERS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, OAM_LM_COUNTERSm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, SRC_MODID_EGRESS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, SRC_MODID_EGRESSm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, SRC_MODID_INGRESS_BLOCK_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, SRC_MODID_INGRESS_BLOCKm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, E2E_HOL_STATUS_1_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, E2E_HOL_STATUS_1m, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, E2E_HOL_STATUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, E2E_HOL_STATUSm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, VLAN_PROFILE_2_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_PROFILE_2m, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, MAC_BLOCK_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MAC_BLOCKm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, ING_PW_TERM_SEQ_NUM_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_PW_TERM_SEQ_NUMm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, ALTERNATE_EMIRROR_BITMAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ALTERNATE_EMIRROR_BITMAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, MODPORT_MAP_MIRROR_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MODPORT_MAP_MIRRORm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, PORT_LAG_FAILOVER_SET_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, PORT_LAG_FAILOVER_SETm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, ING_HIGIG_TRUNK_OVERRIDE_PROFILE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_HIGIG_TRUNK_OVERRIDE_PROFILEm, 
+       INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, MODPORT_MAP_SW_PARITY_ENf, 0, MODPORT_MAP_SWm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, NONUCAST_TRUNK_BLOCK_MASK_PARITY_ENf, 0, NONUCAST_TRUNK_BLOCK_MASKm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, TRUNK_BITMAP_TABLE_PARITY_ENf, 0, TRUNK_BITMAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, EGR_MASK_PARITY_ENf, 0, EGR_MASKm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, MODPORT_MAP_MIRROR_PARITY_ENf, 0, MODPORT_MAP_M3m, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, MODPORT_MAP_MIRROR_PARITY_ENf, 0, MODPORT_MAP_M2m, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_0r, MODPORT_MAP_MIRROR_PARITY_ENf, 0, MODPORT_MAP_M1m, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_1r, SERVICE_PORT_MAP_PARITY_ENf, 0, SERVICE_PORT_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_1r, SERVICE_QUEUE_MAP_PARITY_ENf, 0, SERVICE_QUEUE_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_1r, ING_MISC_PORT_CONFIG_PARITY_ENf, 1, INVALIDm, ING_MISC_PORT_CONFIGr, "" },
+-    { ISW2_SER_CONTROL_1r, SFLOW_EGR_THRESHOLD_PARITY_ENf, 1, INVALIDm, SFLOW_EGR_THRESHOLDr, "" },
+-    /*{ ISW2_SER_CONTROL_1r, ING_NIV_RX_FRAMES_VLAN_TAGGED_PARITY_ENf, 1, INVALIDm,
++    { ISW2_SER_CONTROL_0r, MODPORT_MAP_SW_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MODPORT_MAP_SWm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, NONUCAST_TRUNK_BLOCK_MASK_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, NONUCAST_TRUNK_BLOCK_MASKm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, TRUNK_BITMAP_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, TRUNK_BITMAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, EGR_MASK_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EGR_MASKm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, MODPORT_MAP_MIRROR_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MODPORT_MAP_M3m, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, MODPORT_MAP_MIRROR_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MODPORT_MAP_M2m, INVALIDr, "" },
++    { ISW2_SER_CONTROL_0r, MODPORT_MAP_MIRROR_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MODPORT_MAP_M1m, INVALIDr, "" },
++    { ISW2_SER_CONTROL_1r, SERVICE_PORT_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, SERVICE_PORT_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_1r, SERVICE_QUEUE_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, SERVICE_QUEUE_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_1r, ING_MISC_PORT_CONFIG_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, ING_MISC_PORT_CONFIGr, "" },
++    { ISW2_SER_CONTROL_1r, SFLOW_EGR_THRESHOLD_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, SFLOW_EGR_THRESHOLDr, "" },
++    /*{ ISW2_SER_CONTROL_1r, ING_NIV_RX_FRAMES_VLAN_TAGGED_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm,
+       ING_NIV_RX_FRAMES_VLAN_TAGGEDr, "" },
+-    { ISW2_SER_CONTROL_1r, ING_NIV_RX_FRAMES_FORWARDING_DROP_PARITY_ENf, 1, INVALIDm, 
++    { ISW2_SER_CONTROL_1r, ING_NIV_RX_FRAMES_FORWARDING_DROP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, 
+       ING_NIV_RX_FRAMES_FORWARDING_DROPr, "" },
+-    { ISW2_SER_CONTROL_1r, ING_NIV_RX_FRAMES_ERROR_DROP_PARITY_ENf, 1, INVALIDm,
++    { ISW2_SER_CONTROL_1r, ING_NIV_RX_FRAMES_ERROR_DROP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm,
+       ING_NIV_RX_FRAMES_ERROR_DROPr, "" },*/
+-    
+-    
+-    { ISW2_SER_CONTROL_1r, L3_MTU_VALUES_PARITY_ENf, 0, L3_MTU_VALUESm, INVALIDr, "" },
+-    /*{ ISW2_SER_CONTROL_1r, ING_TRILL_RX_NETWORK_PORT_NON_TRILL_PKTS_DISCARDED_PARITY_ENf, 1, INVALIDm, 
++
++
++    { ISW2_SER_CONTROL_1r, L3_MTU_VALUES_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_MTU_VALUESm, INVALIDr, "" },
++    /*{ ISW2_SER_CONTROL_1r, ING_TRILL_RX_NETWORK_PORT_NON_TRILL_PKTS_DISCARDED_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, 
+       ING_TRILL_RX_NETWORK_PORT_NON_TRILL_PKTS_DISCARDEDr, "" },
+-    { ISW2_SER_CONTROL_1r, ING_TRILL_RX_ACCESS_PORT_TRILL_PKTS_DISCARDED_PARITY_ENf, 1, INVALIDm, 
++    { ISW2_SER_CONTROL_1r, ING_TRILL_RX_ACCESS_PORT_TRILL_PKTS_DISCARDED_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, 
+       ING_TRILL_RX_ACCESS_PORT_TRILL_PKTS_DISCARDEDr, "" },
+-    { ISW2_SER_CONTROL_1r, ING_TRILL_RX_PKTS_PARITY_ENf, 1, INVALIDm, ING_TRILL_RX_PKTSr, "" },*/
+-    { ISW2_SER_CONTROL_1r, HG_COUNTERS_PARITY_ENf, 1, INVALIDm, INVALIDr, "HG STATS COUNTERS" },
+-    { ISW2_SER_CONTROL_1r, RDBGC_MEM_INST2_PARITY_ENf, 1, INVALIDm, INVALIDr, "RDBGC5/RDBGC6/RDBGC7/RDBGC8" },
+-    { ISW2_SER_CONTROL_1r, RDBGC_MEM_INST1_PARITY_ENf, 1, INVALIDm, INVALIDr, "RDBGC1/RDBGC2/RDBGC3/RDBGC4" },
+-    { ISW2_SER_CONTROL_1r, RDBGC_MEM_INST0_PARITY_ENf, 1, INVALIDm, INVALIDr, "RDISC/RUC/RPORTD/RDBGC0" },
+-    { ISW2_SER_CONTROL_1r, IP_COUNTERS_PARITY_ENf, 1, INVALIDm, INVALIDr, "IP STATS COUNTERS" },
+-    { ISW2_SER_CONTROL_1r, SW2_EOP_BUFFER_C_PARITY_ENf, 0, INVALIDm, INVALIDr, "SW2 EOP BUFFER C" },
+-    { ISW2_SER_CONTROL_1r, SW2_EOP_BUFFER_B_PARITY_ENf, 0, INVALIDm, INVALIDr, "SW2 EOP BUFFER B" },
+-    { ISW2_SER_CONTROL_1r, SW2_EOP_BUFFER_A_PARITY_ENf, 0, INVALIDm, INVALIDr, "SW2 EOP BUFFER A" },
+-    { ISW2_SER_CONTROL_1r, EMIRROR_CONTROL3_PARITY_ENf, 0, EMIRROR_CONTROL3m, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_1r, EMIRROR_CONTROL2_PARITY_ENf, 0, EMIRROR_CONTROL2m, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_1r, EMIRROR_CONTROL1_PARITY_ENf, 0, EMIRROR_CONTROL1m, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_1r, EMIRROR_CONTROL_PARITY_ENf, 0, EMIRROR_CONTROLm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, ENDPOINT_COS_MAP_PARITY_ENf, 0, ENDPOINT_COS_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, PHB2_COS_MAP_PARITY_ENf, 0, PHB2_COS_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, ENDPOINT_QUEUE_MAP_PARITY_ENf, 0, ENDPOINT_QUEUE_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_PKT_PRI_MAP_PARITY_ENf, 0, ING_FLEX_CTR_PKT_PRI_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_PRI_CNG_MAP_PARITY_ENf, 0, ING_FLEX_CTR_PRI_CNG_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_PORT_MAP_PARITY_ENf, 0, ING_FLEX_CTR_PORT_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_TOS_MAP_PARITY_ENf, 0, ING_FLEX_CTR_TOS_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_PKT_RES_MAP_PARITY_ENf, 0, ING_FLEX_CTR_PKT_RES_MAPm, INVALIDr, "" },
+-    { ISW2_SER_CONTROL_2r, ING_SERVICE_PRI_MAP_PARITY_ENf, 0, ING_SERVICE_PRI_MAPm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, VLAN_XLATE_PARITY_EN_LPf, 0, VLAN_XLATE_LPm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, ING_ETAG_PCP_MAPPING_PARITY_ENf, 0, ING_ETAG_PCP_MAPPINGm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, VLAN_PROT_PARITY_ENf, 0, VLAN_PROTOCOL_DATAm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, ING_VLAN_TAG_ACTION_PROFILE_PARITY_ENf, 0, ING_VLAN_TAG_ACTION_PROFILEm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, MPLS_ENTRY_PARITY_ENf, 0, MPLS_ENTRYm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, VLAN_SUBNET_PARITY_ENf, 0, VLAN_SUBNET_DATA_ONLYm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, VLAN_PROT_PARITY_ENf, 0, VLAN_PROTOCOLm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, VLAN_XLATE_PARITY_ENf, 0, VLAN_XLATEm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, VFP_POLICY_PARITY_ENf, 0, VFP_POLICY_TABLEm, INVALIDr, "" },
+-    { IVXLT_SER_CONTROLr, IVXLT_BUS_PARITY_ENf, 2, INVALIDm, INVALIDr, "IVXLT BUS" },
+-    { L2_ENTRY_PARITY_CONTROLr, PARITY_ENf, 0, L2Xm, INVALIDr, "" },
+-    { L2_ENTRY_PARITY_CONTROLr, ING_DVP_TABLE_PARITY_ENf, 0, ING_DVP_TABLEm, INVALIDr, "" },
+-    { L2_ENTRY_PARITY_CONTROLr, L2_ENDPOINT_ID_PARITY_ENf, 0, L2_ENDPOINT_IDm, INVALIDr, "" },
+-    { L2_ENTRY_PARITY_CONTROLr, PARITY_EN_LPf, 0, L2_ENTRY_LPm, INVALIDr, "" },
+-    { L2_MOD_FIFO_PARITY_CONTROLr, PARITY_ENf, 0, L2_MOD_FIFOm, INVALIDr, "" },
+-    { L2_USER_ENTRY_DATA_PARITY_CONTROLr, PARITY_ENf, 0, L2_USER_ENTRY_DATA_ONLYm, INVALIDr, "" },
+-    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, 0, L3_ENTRY_ONLYm, INVALIDr, "" },
+-    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, 0, L3_ENTRY_IPV4_UNICASTm, INVALIDr, "" },
+-    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, 0, L3_ENTRY_IPV4_MULTICASTm, INVALIDr, "" },
+-    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, 0, L3_ENTRY_IPV6_UNICASTm, INVALIDr, "" },
+-    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, 0, L3_ENTRY_IPV6_MULTICASTm, INVALIDr, "" },
+-    { L3_ENTRY_PARITY_CONTROLr, ING_ACTIVE_L3_IIF_PROFILE_PARITY_ENf, 0, ING_ACTIVE_L3_IIF_PROFILEm, INVALIDr, "" },
+-    { L3_ENTRY_PARITY_CONTROLr, PARITY_EN_LPf, 0, L3_ENTRY_LPm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, ING_VP_VLAN_MEMBERSHIP_PAR_ENf, 0, ING_VP_VLAN_MEMBERSHIPm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, L3_IIF_PAR_ENf, 0, L3_IIFm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, ING_MPLS_EXP_MAPPING_PAR_ENf, 0, ING_MPLS_EXP_MAPPINGm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, VRF_PAR_ENf, 0, VRFm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, VLAN_PAR_ENf, 0, VLAN_TABm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, VLAN_STG_PAR_ENf, 0, STG_TABm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, VLAN_PROFILE_PAR_ENf, 0, VLAN_PROFILE_TABm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, ING_OUTER_DOT1P_MAPPING_TABLE_PAR_ENf, 0, ING_OUTER_DOT1P_MAPPING_TABLEm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, IP_OPTION_CONTROL_PROFILE_TABLE_PAR_ENf, 0, IP_OPTION_CONTROL_PROFILE_TABLEm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, L3_IIF_PROFILE_PAR_ENf, 0, L3_IIF_PROFILEm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, ING_DNAT_ADDRESS_TYPE_PAR_ENf, 0, ING_DNAT_ADDRESS_TYPEm, INVALIDr, "" },
+-    { MPLS_SER_CONTROLr, MPLS_BUS_PAR_ENf, 2, INVALIDm, INVALIDr, "MPLS BUS" },
+-    { VP_SER_CONTROLr, VLAN_MPLS_PAR_ENf, 0, VLAN_MPLSm, INVALIDr, "" },
+-    { VP_SER_CONTROLr, MY_STATION_TCAM_DATA_ONLY_PAR_ENf, 0, MY_STATION_TCAM_DATA_ONLYm, INVALIDr, "" },
+-    { VP_SER_CONTROLr, SOURCE_VP_PAR_ENf, 0, SOURCE_VPm, INVALIDr, "" },
+-    { VP_SER_CONTROLr, VFI_PAR_ENf, 0, VFIm, INVALIDr, "" },
+-    { VP_SER_CONTROLr, VFI_1_PAR_ENf, 0, VFI_1m, INVALIDr, "" },
+-    { VP_SER_CONTROLr, ING_VSAN_PAR_ENf, 0, ING_VSANm, INVALIDr, "" },
+-    { VP_SER_CONTROLr, ING_TRILL_ADJACENCY_PAR_ENf, 1, INVALIDm, ING_TRILL_ADJACENCYr, "" },
+-    { VP_SER_CONTROLr, VP_BUS_PAR_ENf, 2, INVALIDm, INVALIDr, "VP BUS" },
++    { ISW2_SER_CONTROL_1r, ING_TRILL_RX_PKTS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, ING_TRILL_RX_PKTSr, "" },*/
++    { ISW2_SER_CONTROL_1r, HG_COUNTERS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_OTHER, INVALIDm, INVALIDr, "HG STATS COUNTERS" },
++    { ISW2_SER_CONTROL_1r, RDBGC_MEM_INST2_PARITY_ENf, _SOC_SER_SOURCE_TYPE_OTHER, INVALIDm, INVALIDr, "RDBGC5/RDBGC6/RDBGC7/RDBGC8" },
++    { ISW2_SER_CONTROL_1r, RDBGC_MEM_INST1_PARITY_ENf, _SOC_SER_SOURCE_TYPE_OTHER, INVALIDm, INVALIDr, "RDBGC1/RDBGC2/RDBGC3/RDBGC4" },
++    { ISW2_SER_CONTROL_1r, RDBGC_MEM_INST0_PARITY_ENf, _SOC_SER_SOURCE_TYPE_OTHER, INVALIDm, INVALIDr, "RDISC/RUC/RPORTD/RDBGC0" },
++    { ISW2_SER_CONTROL_1r, IP_COUNTERS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_OTHER, INVALIDm, INVALIDr, "IP STATS COUNTERS" },
++    { ISW2_SER_CONTROL_1r, SW2_EOP_BUFFER_C_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "SW2 EOP BUFFER C" },
++    { ISW2_SER_CONTROL_1r, SW2_EOP_BUFFER_B_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "SW2 EOP BUFFER B" },
++    { ISW2_SER_CONTROL_1r, SW2_EOP_BUFFER_A_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUF, INVALIDm, INVALIDr, "SW2 EOP BUFFER A" },
++    { ISW2_SER_CONTROL_1r, EMIRROR_CONTROL3_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EMIRROR_CONTROL3m, INVALIDr, "" },
++    { ISW2_SER_CONTROL_1r, EMIRROR_CONTROL2_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EMIRROR_CONTROL2m, INVALIDr, "" },
++    { ISW2_SER_CONTROL_1r, EMIRROR_CONTROL1_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EMIRROR_CONTROL1m, INVALIDr, "" },
++    { ISW2_SER_CONTROL_1r, EMIRROR_CONTROL_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, EMIRROR_CONTROLm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, ENDPOINT_COS_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ENDPOINT_COS_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, PHB2_COS_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, PHB2_COS_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, ENDPOINT_QUEUE_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ENDPOINT_QUEUE_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_PKT_PRI_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_PKT_PRI_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_PRI_CNG_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_PRI_CNG_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_PORT_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_PORT_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_TOS_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_TOS_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, ING_FLEX_CTR_PKT_RES_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_FLEX_CTR_PKT_RES_MAPm, INVALIDr, "" },
++    { ISW2_SER_CONTROL_2r, ING_SERVICE_PRI_MAP_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_SERVICE_PRI_MAPm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, VLAN_XLATE_PARITY_EN_LPf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_XLATE_LPm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, ING_ETAG_PCP_MAPPING_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_ETAG_PCP_MAPPINGm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, VLAN_PROT_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_PROTOCOL_DATAm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, ING_VLAN_TAG_ACTION_PROFILE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_VLAN_TAG_ACTION_PROFILEm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, MPLS_ENTRY_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, MPLS_ENTRYm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, VLAN_SUBNET_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_SUBNET_DATA_ONLYm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, VLAN_PROT_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_PROTOCOLm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, VLAN_XLATE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_XLATEm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, VFP_POLICY_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, VFP_POLICY_TABLEm, INVALIDr, "" },
++    { IVXLT_SER_CONTROLr, IVXLT_BUS_PARITY_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "IVXLT BUS" },
++    { L2_ENTRY_PARITY_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L2Xm, INVALIDr, "" },
++    { L2_ENTRY_PARITY_CONTROLr, ING_DVP_TABLE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_DVP_TABLEm, INVALIDr, "" },
++    { L2_ENTRY_PARITY_CONTROLr, L2_ENDPOINT_ID_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L2_ENDPOINT_IDm, INVALIDr, "" },
++    { L2_ENTRY_PARITY_CONTROLr, PARITY_EN_LPf, _SOC_SER_SOURCE_TYPE_MEM, L2_ENTRY_LPm, INVALIDr, "" },
++    { L2_MOD_FIFO_PARITY_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L2_MOD_FIFOm, INVALIDr, "" },
++    { L2_USER_ENTRY_DATA_PARITY_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L2_USER_ENTRY_DATA_ONLYm, INVALIDr, "" },
++    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_ENTRY_ONLYm, INVALIDr, "" },
++    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_ENTRY_IPV4_UNICASTm, INVALIDr, "" },
++    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_ENTRY_IPV4_MULTICASTm, INVALIDr, "" },
++    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_ENTRY_IPV6_UNICASTm, INVALIDr, "" },
++    { L3_ENTRY_PARITY_CONTROLr, PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_ENTRY_IPV6_MULTICASTm, INVALIDr, "" },
++    { L3_ENTRY_PARITY_CONTROLr, ING_ACTIVE_L3_IIF_PROFILE_PARITY_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_ACTIVE_L3_IIF_PROFILEm, INVALIDr, "" },
++    { L3_ENTRY_PARITY_CONTROLr, PARITY_EN_LPf, _SOC_SER_SOURCE_TYPE_MEM, L3_ENTRY_LPm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, ING_VP_VLAN_MEMBERSHIP_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_VP_VLAN_MEMBERSHIPm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, L3_IIF_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_IIFm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, ING_MPLS_EXP_MAPPING_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_MPLS_EXP_MAPPINGm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, VRF_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, VRFm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, VLAN_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_TABm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, VLAN_STG_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, STG_TABm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, VLAN_PROFILE_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_PROFILE_TABm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, ING_OUTER_DOT1P_MAPPING_TABLE_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_OUTER_DOT1P_MAPPING_TABLEm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, IP_OPTION_CONTROL_PROFILE_TABLE_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, IP_OPTION_CONTROL_PROFILE_TABLEm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, L3_IIF_PROFILE_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, L3_IIF_PROFILEm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, ING_DNAT_ADDRESS_TYPE_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_DNAT_ADDRESS_TYPEm, INVALIDr, "" },
++    { MPLS_SER_CONTROLr, MPLS_BUS_PAR_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "MPLS BUS" },
++    { VP_SER_CONTROLr, VLAN_MPLS_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, VLAN_MPLSm, INVALIDr, "" },
++    { VP_SER_CONTROLr, MY_STATION_TCAM_DATA_ONLY_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, MY_STATION_TCAM_DATA_ONLYm, INVALIDr, "" },
++    { VP_SER_CONTROLr, SOURCE_VP_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, SOURCE_VPm, INVALIDr, "" },
++    { VP_SER_CONTROLr, VFI_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, VFIm, INVALIDr, "" },
++    { VP_SER_CONTROLr, VFI_1_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, VFI_1m, INVALIDr, "" },
++    { VP_SER_CONTROLr, ING_VSAN_PAR_ENf, _SOC_SER_SOURCE_TYPE_MEM, ING_VSANm, INVALIDr, "" },
++    { VP_SER_CONTROLr, ING_TRILL_ADJACENCY_PAR_ENf, _SOC_SER_SOURCE_TYPE_REG, INVALIDm, ING_TRILL_ADJACENCYr, "" },
++    { VP_SER_CONTROLr, VP_BUS_PAR_ENf, _SOC_SER_SOURCE_TYPE_BUS, INVALIDm, INVALIDr, "VP BUS" },
+     { INVALIDr }
+ };
+	 
+@@ -1992,13 +1999,13 @@ _soc_trident2_ser_enable_all(int unit, i
+                 egress = 1;
+             }
+             if (enable) {
+-                if (1 == _soc_td2_ser_block_info[bcount].info[pcount].type) { /* register */
++                if (_SOC_SER_SOURCE_TYPE_REG == _soc_td2_ser_block_info[bcount].info[pcount].type) { /* register */
+                     reg = _soc_td2_ser_block_info[bcount].info[pcount].reg;
+                     if (!SOC_REG_IS_VALID(unit, reg)) {
+                         continue;
+                     }
+                 } 
+-                if (0 == _soc_td2_ser_block_info[bcount].info[pcount].type) { /* mem */
++                if (_SOC_SER_SOURCE_TYPE_MEM == _soc_td2_ser_block_info[bcount].info[pcount].type) { /* mem */
+                     mem = _soc_td2_ser_block_info[bcount].info[pcount].mem;
+                     if (!SOC_MEM_IS_VALID(unit, mem) ||
+                         ((mem != INVALIDm) && 
+@@ -2007,8 +2014,10 @@ _soc_trident2_ser_enable_all(int unit, i
+                         continue;
+                     }
+                 }
+-                if ((2 == _soc_td2_ser_block_info[bcount].info[pcount].type) ||
+-                    (3 == _soc_td2_ser_block_info[bcount].info[pcount].type)) { /* bus or internal buffer */
++                /* bus or internal buffer or others without mem/reg name */
++                if ((_SOC_SER_SOURCE_TYPE_BUS == _soc_td2_ser_block_info[bcount].info[pcount].type) ||
++                    (_SOC_SER_SOURCE_TYPE_BUF == _soc_td2_ser_block_info[bcount].info[pcount].type) ||
++                    (_SOC_SER_SOURCE_TYPE_OTHER == _soc_td2_ser_block_info[bcount].info[pcount].type)) {
+                     reg = _soc_td2_ser_block_info[bcount].info[pcount].enable_reg;
+                     if (!SOC_REG_IS_VALID(unit, reg)) {
+                         continue;
+
+--- sdk/include/bcm/stat.h	2018-03-30 03:30:32.000000000 -0400
++++ sdk/include/bcm/stat.h	2018-08-20 21:47:04.965919000 -0400
+@@ -1076,6 +1076,24 @@ extern int bcm_stat_sync_multi_get32(
+     bcm_stat_val_t *stat_arr, 
+     uint32 *value_arr);
+ 
++/* 
++ * Get the specified hardware statistics from the device, no software
++ * cache update.
++ */
++extern int bcm_stat_direct_get(
++    int unit, 
++    bcm_port_t port, 
++    bcm_stat_val_t type, 
++    uint64 *value);
++
++/* Get the specified hardware statistics from the device. */
++extern int bcm_stat_direct_multi_get(
++    int unit, 
++    bcm_port_t port, 
++    int nstat, 
++    bcm_stat_val_t *stat_arr, 
++    uint64 *value_arr);
++
+ /* Set/get debug counter to count certain packet types. */
+ extern int bcm_stat_custom_set(
+     int unit, 
+
+--- sdk/include/bcm_int/esw/stat.h	2018-03-30 03:30:34.000000000 -0400
++++ sdk/include/bcm_int/esw/stat.h	2018-08-20 21:47:04.967921000 -0400
+@@ -22,10 +22,17 @@
+ #define REG_MATH_DECL \
+         uint64 reg_val
+ 
++#define _BCM_SYNC_MODE_NO_SYNC  0 /* No hardware sync. */
++#define _BCM_SYNC_MODE_SYNC     1 /* sync hardware and update cache. */
++#define _BCM_SYNC_MODE_NO_CACHE 2 /* sync hardware and no cache update. */
++
+ #define REG_ADD(unit, port, sync_mode, reg, val)                           \
+     if (SOC_REG_IS_COUNTER_TABLE(unit, reg) ||                             \
+         (SOC_REG_IS_VALID(unit, reg) && SOC_REG_IS_COUNTER(unit, reg))) {  \
+-        if (sync_mode) {                                                   \
++        if (sync_mode == _BCM_SYNC_MODE_NO_CACHE) {                        \
++            SOC_IF_ERROR_RETURN(soc_counter_direct_get(unit, port, reg,    \
++                                                       0, &reg_val));      \
++        } else if (sync_mode) {                                            \
+             SOC_IF_ERROR_RETURN(soc_counter_sync_get(unit, port, reg,      \
+                                                 0, &reg_val));             \
+         } else {                                                           \
+
+--- sdk/src/bcm/esw/stat.c	2018-03-30 03:31:20.000000000 -0400
++++ sdk/src/bcm/esw/stat.c	2018-08-20 21:47:04.971923000 -0400
+@@ -2924,6 +2924,89 @@ bcm_esw_stat_sync_multi_get32(int unit, 
+ 
+ /*
+  * Function:
++ *    bcm_esw_stat_direct_get
++ * Description:
++ *    Get the specified statistic from the StrataSwitch
++ * Parameters:
++ *    unit - StrataSwitch PCI device unit number (driver internal).
++ *    port - zero-based port number
++ *    type - SNMP statistics type (see stat.h)
++ *    val - (OUT) 64-bit counter value.
++ * Returns:
++ *    BCM_E_NONE - Success.
++ *    BCM_E_PARAM - Illegal parameter.
++ *    BCM_E_BADID - Illegal port number.
++ *    BCM_E_INTERNAL - Chip access failure.
++ *    BCM_E_UNAVAIL - Counter/variable is not implemented
++ *                    on this current chip.
++ * Notes:
++ *    Hardware counter value will be fetched and returned.
++ *    Software counter cache will not be updated.
++ *    Only RxPFCFrameXXX stat types are currently supported.
++ */
++
++int
++bcm_esw_stat_direct_get(int unit, bcm_port_t port,
++                        bcm_stat_val_t type, uint64 *val)
++{
++    int rv = BCM_E_UNAVAIL;
++
++#if defined(BCM_TRIDENT2_SUPPORT)
++    if (SOC_IS_TRIDENT2(unit) || SOC_IS_TRIDENT2PLUS(unit) ||
++        SOC_IS_TRIDENT3(unit) ||
++        SOC_IS_TOMAHAWK(unit) || SOC_IS_TOMAHAWK2(unit) || SOC_IS_TOMAHAWK3(unit)) {
++        if (!((type >= snmpBcmRxPFCFrameXonPriority0) &&
++              (type <= snmpBcmRxPFCFramePriority7))) {
++            return BCM_E_UNAVAIL;
++        }
++        /* read counter from the device */
++        rv = _bcm_esw_stat_get(unit, port, _BCM_SYNC_MODE_NO_CACHE, type, val);
++    }
++#endif /* BCM_TRIDENT2_SUPPORT */
++
++    return rv;
++}
++
++/*
++ * Function:
++ *      bcm_esw_stat_direct_multi_get
++ * Purpose:
++ *      Get the specified statistics from the device.
++ * Parameters:
++ *      unit - (IN) Unit number.
++ *      port - (IN) Port number
++ *      nstat - (IN) Number of elements in stat array
++ *      stat_arr - (IN) Array of SNMP statistics types defined in bcm_stat_val_t
++ *      value_arr - (OUT) Collected statistics values
++ * Returns:
++ *      BCM_E_xxx
++ * Notes:
++ */
++int
++bcm_esw_stat_direct_multi_get(int unit, bcm_port_t port, int nstat,
++                              bcm_stat_val_t *stat_arr, uint64 *value_arr)
++{
++    int stix;
++
++    if (nstat <= 0) {
++        return BCM_E_PARAM;
++    }
++
++    if ((NULL == stat_arr) || (NULL == value_arr)) {
++        return BCM_E_PARAM;
++    }
++
++    for (stix = 0; stix < nstat; stix++) {
++        BCM_IF_ERROR_RETURN
++            (bcm_esw_stat_direct_get(unit, port, stat_arr[stix],
++                                     &(value_arr[stix])));
++    }
++
++    return BCM_E_NONE;
++}
++
++/*
++ * Function:
+  *	bcm_stat_clear
+  * Description:
+  *	Clear the port based statistics from the StrataSwitch port.
+
+--- sdk/include/bcm_int/dispatch.h	2018-03-30 03:30:32.000000000 -0400
++++ sdk/include/bcm_int/dispatch.h	2018-08-20 21:47:04.976924000 -0400
+@@ -4627,6 +4627,8 @@ typedef struct {
+ 	int (*stat_custom_group_create)(int,uint32,bcm_stat_object_t,uint32 *,uint32 *);
+ 	int (*stat_custom_group_id_create)(int,uint32,bcm_stat_object_t,uint32,uint32,bcm_stat_custom_counter_info_t *);
+ 	int (*stat_custom_set)(int,bcm_port_t,bcm_stat_val_t,uint32);
++        int (*stat_direct_get)(int,bcm_port_t,bcm_stat_val_t,uint64 *);
++        int (*stat_direct_multi_get)(int,bcm_port_t,int,bcm_stat_val_t *,uint64 *);
+ 	int (*stat_egress_receive_tm_pointer_format_get)(int,int,bcm_stat_egress_receive_tm_pointer_format_t *);
+ 	int (*stat_egress_receive_tm_pointer_format_set)(int,int,bcm_stat_egress_receive_tm_pointer_format_t *);
+ 	/* bcm_stat_engine_enable_t_init not dispatchable */
+
+--- sdk/include/bcm_int/tomahawk3_dispatch.h	2018-03-30 03:30:32.000000000 -0400
++++ sdk/include/bcm_int/tomahawk3_dispatch.h	2018-08-20 21:47:04.981921000 -0400
+@@ -4556,6 +4556,8 @@ extern int bcm_esw_stat_custom_get(int,b
+ extern int bcm_esw_stat_custom_group_create(int,uint32,bcm_stat_object_t,uint32 *,uint32 *);
+ extern int bcm_esw_stat_custom_group_id_create(int,uint32,bcm_stat_object_t,uint32,uint32,bcm_stat_custom_counter_info_t *);
+ extern int bcm_esw_stat_custom_set(int,bcm_port_t,bcm_stat_val_t,uint32);
++extern int bcm_esw_stat_direct_get(int,bcm_port_t,bcm_stat_val_t,uint64 *);
++extern int bcm_esw_stat_direct_multi_get(int,bcm_port_t,int,bcm_stat_val_t *,uint64 *);
+ /* bcm_stat_egress_receive_tm_pointer_format_get mapped to bcm_e_unavail */
+ /* bcm_stat_egress_receive_tm_pointer_format_set mapped to bcm_e_unavail */
+ /* bcm_stat_engine_enable_t_init not dispatchable */
+
+--- sdk/include/soc/counter.h	2018-03-30 03:30:39.000000000 -0400
++++ sdk/include/soc/counter.h	2018-08-20 21:47:04.983920000 -0400
+@@ -624,6 +624,8 @@ extern int soc_counter_sync_get(int unit
+                                 int ar_idx, uint64 *val);
+ extern int soc_counter_sync_get32(int unit, soc_port_t port, soc_reg_t ctr_reg,
+                                   int ar_idx, uint32 *val);
++extern int soc_counter_direct_get(int unit, soc_port_t port, soc_reg_t ctr_reg,
++                                  int ar_idx, uint64 *val);
+ 
+ extern int soc_counter_port_pbmp_add(int unit, int port);
+ extern int soc_counter_port_pbmp_remove(int unit, int port);
+
+--- sdk/src/bcm/api_ref.c	2018-03-30 03:31:17.000000000 -0400
++++ sdk/src/bcm/api_ref.c	2018-08-20 21:47:04.987928000 -0400
+@@ -4633,6 +4633,8 @@ bcm_api_ref_t bcm_api_tbl[] = {
+     (bcm_api_ref_t) bcm_stat_custom_group_create,
+     (bcm_api_ref_t) bcm_stat_custom_group_id_create,
+     (bcm_api_ref_t) bcm_stat_custom_set,
++    (bcm_api_ref_t) bcm_stat_direct_get,
++    (bcm_api_ref_t) bcm_stat_direct_multi_get,
+     (bcm_api_ref_t) bcm_stat_egress_receive_tm_pointer_format_get,
+     (bcm_api_ref_t) bcm_stat_egress_receive_tm_pointer_format_set,
+     (bcm_api_ref_t) bcm_stat_engine_enable_t_init,
+
+--- sdk/src/bcm/dispatch.c	2018-03-30 03:31:17.000000000 -0400
++++ sdk/src/bcm/dispatch.c	2018-08-21 10:52:01.110244000 -0400
+@@ -197937,6 +197937,72 @@ bcm_stat_custom_set(
+ 	return r_rv;
+ }
+ 
++extern int 
++bcm_esw_stat_direct_get(
++    int unit, 
++    bcm_port_t port,
++    bcm_stat_val_t type,
++    uint64 *value);
++int 
++bcm_stat_direct_get(
++    int unit, 
++    bcm_port_t port, 
++    bcm_stat_val_t type, 
++    uint64 *value)
++{
++	int	r_rv;
++	bcm_dtype_t	dtype;
++
++	BCM_CR_TRANSACTION_START(unit);
++
++	if (!BCM_UNIT_CHECK(unit)) {
++		r_rv = BCM_E_UNIT;
++	} else {
++		BCM_API_XLATE_PORT_A2P(unit,&port);
++		dtype = BCM_DTYPE(unit);
++                r_rv = bcm_esw_stat_direct_get(unit, port, type, value);
++		BCM_STATE_SYNC(unit);
++	}
++	BCM_CR_TRANSACTION_END(unit);
++	BCM_UNIT_IDLE(unit);
++	BCM_API(BSL_LS_BCMAPI_STAT, "bcm_stat_direct_get", 4, 3, unit, port, type, r_rv);
++	return r_rv;
++}
++
++extern int
++bcm_esw_stat_direct_multi_get(
++    int unit,
++    bcm_port_t port,
++    int nstat,
++    bcm_stat_val_t *stat_arr,
++    uint64 *value_arr);
++int 
++bcm_stat_direct_multi_get(
++    int unit, 
++    bcm_port_t port, 
++    int nstat, 
++    bcm_stat_val_t *stat_arr, 
++    uint64 *value_arr)
++{
++	int	r_rv;
++	bcm_dtype_t	dtype;
++
++	BCM_CR_TRANSACTION_START(unit);
++
++	if (!BCM_UNIT_CHECK(unit)) {
++		r_rv = BCM_E_UNIT;
++	} else {
++		BCM_API_XLATE_PORT_A2P(unit,&port);
++		dtype = BCM_DTYPE(unit);
++                r_rv = bcm_esw_stat_direct_multi_get(unit, port, nstat, stat_arr, value_arr);
++		BCM_STATE_SYNC(unit);
++	}
++	BCM_CR_TRANSACTION_END(unit);
++	BCM_UNIT_IDLE(unit);
++	BCM_API(BSL_LS_BCMAPI_STAT, "bcm_stat_direct_multi_get", 5, 3, unit, port, nstat, r_rv);
++	return r_rv;
++}
++
+ /* BCM Devlist macros for generating the dispatch table for this function */
+ 
+ /* Externs for the required functions */
+
+--- sdk/src/bcm/tomahawk3_dispatch.c	2018-03-30 03:31:17.000000000 -0400
++++ sdk/src/bcm/tomahawk3_dispatch.c	2018-08-20 21:47:05.018932000 -0400
+@@ -47935,6 +47935,31 @@ bcm_tomahawk3_stat_custom_set(
+ }
+ #endif
+ 
++#ifdef BCM_TOMAHAWK3_SUPPORT
++int 
++bcm_tomahawk3_stat_direct_get(
++    int unit, 
++    bcm_port_t port, 
++    bcm_stat_val_t type, 
++    uint64 *value)
++{
++    return bcm_esw_stat_direct_get(unit, port, type, value);
++}
++#endif
++
++#ifdef BCM_TOMAHAWK3_SUPPORT
++int 
++bcm_tomahawk3_stat_direct_multi_get(
++    int unit, 
++    bcm_port_t port, 
++    int nstat, 
++    bcm_stat_val_t *stat_arr, 
++    uint64 *value_arr)
++{
++    return bcm_esw_stat_direct_multi_get(unit, port, nstat, stat_arr, value_arr);
++}
++#endif
++
+ int 
+ bcm_tomahawk3_stat_egress_receive_tm_pointer_format_get(
+     int unit, 
+
+--- sdk/src/soc/common/counter.c	2018-03-30 03:31:35.000000000 -0400
++++ sdk/src/soc/common/counter.c	2018-08-20 21:47:05.023924000 -0400
+@@ -10299,6 +10299,35 @@ soc_counter_sync_get32(int unit, soc_por
+     return rv;
+ }
+ 
++int
++soc_counter_direct_get(int unit, soc_port_t port, soc_reg_t ctr_reg,
++                       int ar_idx, uint64 *val)
++{
++    int                 port_index, num_entries;
++    int                 port_base, index;
++    char                *cname;
++    uint64              value;
++
++    port_base = COUNTER_MIN_IDX_GET(unit, port);
++    SOC_IF_ERROR_RETURN(_soc_counter_get_info(unit, port, ctr_reg,
++                                              &port_index, &num_entries,
++                                              &cname));
++    if (ar_idx >= num_entries) {
++        return SOC_E_PARAM;
++    }
++    index = port_index - port_base;
++    ctr_reg = PORT_CTR_REG(unit, port, index)->reg;
++    ar_idx = PORT_CTR_REG(unit, port, index)->index;
++    if (!SOC_COUNTER_INVALID(unit, ctr_reg)) {
++        SOC_IF_ERROR_RETURN(soc_reg_get(unit, ctr_reg, port, ar_idx,
++                                        &value));
++    }
++
++    *val = value;
++
++    return SOC_E_NONE;
++}
++
+ #ifdef BCM_TOMAHAWK_SUPPORT
+ STATIC int
+ _soc_counter_generic_get_delta(int unit, soc_ctr_control_info_t ctrl_info,
+
+--- sdk/src/soc/portmod/pms/pm8x50.c	2018-05-22 19:24:40.000000000 -0400
++++ sdk/src/soc/portmod/pms/pm8x50.c	2018-08-27 16:08:25.294397000 -0400
+@@ -3763,8 +3763,21 @@
+ int pm8x50_port_nof_lanes_get(int unit, int port, pm_info_t pm_info,
+                               int* nof_lanes)
+ {
++    int port_index;
++    uint32_t bitmap, bcnt = 0;
++ 
++    SOC_INIT_FUNC_DEFS;
+ 
+-    return (SOC_E_NONE);
++    _SOC_IF_ERR_EXIT(_pm8x50_port_index_get (unit, port, pm_info, &port_index, &bitmap));
++
++    while (bitmap) {
++        if (bitmap & 0x1) bcnt++;
++        bitmap >>= 1;
++    }
++    *nof_lanes = bcnt;
++
++exit:
++    SOC_FUNC_RETURN;
+ }
+ 
+ /*Set port PHYs' firmware mode*/
+@@ -4494,11 +4507,92 @@
+ 
+     return (SOC_E_NONE);
+ }
++
++STATIC
++int _cdport_mode_get(int unit, int port, pm_info_t pm_info,
++                     int first_phy_index, portmod_port_mode_info_t *p_mode)
++{
++    uint32 reg_val = 0, port_mode = 0;
++    int phy_acc, mac_id = 0, this_phy_index;
++
++    SOC_INIT_FUNC_DEFS;
++
++    PM8x50_PHY_ACCESS_GET(unit, port, pm_info, phy_acc);
++
++    _SOC_IF_ERR_EXIT(READ_CDPORT_MODE_REGr(unit, phy_acc, &reg_val));
++    port_mode = soc_reg_field_get(unit, CDPORT_MODE_REGr, reg_val, SINGLE_PORT_MODE_SPEED_400Gf);
++    if (port_mode){
++        p_mode->cur_mode = portmodPortModeSingle;
++        p_mode->lanes = 8;
++        p_mode->port_index = 0;
++    } else {
++        mac_id = first_phy_index / CDMAC_NUM_LANES;
++        this_phy_index = first_phy_index % CDMAC_NUM_LANES;
++        if (mac_id) {
++            /* CDMAC_1 Port Mode */
++            port_mode = soc_reg_field_get(unit, CDPORT_MODE_REGr, reg_val, MAC1_PORT_MODEf);
++        } else {
++            /* CDMAC_0 Port Mode*/
++            port_mode = soc_reg_field_get(unit, CDPORT_MODE_REGr, reg_val, MAC0_PORT_MODEf);
++        }
++        switch (port_mode) {
++            case 0:
++                p_mode->cur_mode = portmodPortModeQuad;
++                p_mode->lanes = 1;
++                p_mode->port_index = this_phy_index;
++                break;
++            case 1:
++                p_mode->cur_mode = portmodPortModeTri012;
++                if ((this_phy_index == 0)||(this_phy_index == 1)) {
++                    p_mode->lanes = 1;
++                } else {
++                    p_mode->lanes = 2;
++                }
++                p_mode->port_index = this_phy_index;
++                break;
++            case 2:
++                p_mode->cur_mode = portmodPortModeTri023;
++                if ((this_phy_index == 2)||(this_phy_index == 3)) {
++                    p_mode->lanes = 1;
++                } else {
++                    p_mode->lanes = 2;
++                }
++                p_mode->port_index = this_phy_index;
++                break;
++            case 3:
++                p_mode->cur_mode = portmodPortModeDual;
++                p_mode->lanes = 2;
++                p_mode->port_index = this_phy_index;
++                break;
++            case 4:
++                p_mode->cur_mode = portmodPortModeSingle;
++                p_mode->lanes = 4;
++                p_mode->port_index = this_phy_index;
++                break;
++            default:
++                _SOC_EXIT_WITH_ERR(SOC_E_PARAM, (_SOC_MSG("Invalid port mode")));
++                break;
++        }
++    }
++
++exit:
++    SOC_FUNC_RETURN;
++
++}
++
+ int pm8x50_port_mode_get(int unit, int port, pm_info_t pm_info,
+                          portmod_port_mode_info_t* mode)
+ {
++    int port_index;
++    uint32_t bitmap;
+ 
+-    return (SOC_E_NONE);
++    SOC_INIT_FUNC_DEFS;
++
++     _SOC_IF_ERR_EXIT(_pm8x50_port_index_get (unit, port, pm_info, &port_index, &bitmap));
++     _SOC_IF_ERR_EXIT(_cdport_mode_get(unit, port, pm_info, port_index, mode));
++
++exit:
++    SOC_FUNC_RETURN;
+ }
+ 
+ /*set port encap.*/
+
+--- sdk/src/bcm/esw/firebolt/l3.c	2018-05-22 19:11:37.000000000 -0400
++++ sdk/src/bcm/esw/firebolt/l3.c	2018-08-29 14:54:19.053512000 -0400
+@@ -28133,7 +28133,7 @@ _bcm_xgs3_nh_entry_parse(int unit, uint3
+ 
+ #ifdef BCM_TRIDENT_SUPPORT
+     if (soc_feature(unit, soc_feature_nh_for_ifp_actions) && 
+-        0x6 == ent_type && _BCM_L3_FIELD_ONLY == 
++        (((SOC_IS_TOMAHAWK3(unit)) && (0x2 == ent_type)) || (0x6 == ent_type)) && _BCM_L3_FIELD_ONLY ==
+         BCM_XGS3_L3_ENT_FLAG(BCM_XGS3_L3_TBL_PTR(unit, next_hop), index)) {
+         uint8  tag_action = 0;
+         uint32 tag_buffer = 0;
+
+--- original/systems/linux/kernel/modules/bcm-knet/bcm-knet.c   2018-05-22 19:27:12.000000000 -0400
++++ new/systems/linux/kernel/modules/bcm-knet/bcm-knet.c        2018-09-07 12:05:20.923031000 -0400
+@@ -4784,6 +4785,9 @@ bkn_tx(struct sk_buff *skb, struct net_d
+         bkn_suspend_tx(sinfo);
+     }
+
++#if (LINUX_VERSION_CODE <= KERNEL_VERSION(4,6,0))                  
+     dev->trans_start = jiffies;
+-
++#else
++    netif_trans_update(dev);
++#endif
+     spin_unlock_irqrestore(&sinfo->lock, flags);
+
+     return 0;
+
+
+--- original/src/soc/common/mem.c	2018-05-22 19:16:50.000000000 -0400
++++ new/src/soc/common/mem.c		2018-09-20 17:31:04.337304000 -0400
+@@ -17603,7 +17603,7 @@ _soc_mem_alpm_ser_correction(int unit, s
+                                   unit, pipe, index));
+                             soc_reg_field32_modify(unit, sram_info.force_reg,
+                                                    REG_PORT_ANY,
+-                                                   sram_info.force_field, 1);
++                                                   sram_info.force_field, 0xf);
+                             rv = soc_mem_pipe_select_read(unit, SOC_MEM_NO_FLAGS,
+                                                           mem, copyno,
+                                                           acc_type, index, entry);
+
+diff --git a/include/bcm_int/esw/trx.h b/include/bcm_int/esw/trx.h
+index 7c3c3181f2a..c963b0b8609 100755
+--- a/include/bcm_int/esw/trx.h
++++ b/include/bcm_int/esw/trx.h
+@@ -218,6 +218,9 @@ extern int _bcm_misc_port_profile_field32_modify(int unit, int table_id,
+                                                  soc_field_t field, uint32 value);
+ #endif /* BCM_TRIDENT2PLUS_SUPPORT */
+ extern int _bcm_trx_vlan_action_profile_init(int unit);
++#if defined(BCM_TOMAHAWK_SUPPORT)
++extern int _bcm_th_port_vlan_action_profile_reinit(int unit);
++#endif
+ extern int _bcm_trx_vlan_action_profile_entry_add(int unit,
+                                       bcm_vlan_action_set_t *action,
+                                       uint32 *index);
+diff --git a/src/bcm/esw/port.c b/src/bcm/esw/port.c
+index 2361eee3919..8200db978ba 100755
+--- a/src/bcm/esw/port.c
++++ b/src/bcm/esw/port.c
+@@ -11896,6 +11896,16 @@ _bcm_esw_port_wb_recover(int unit)
+ #endif /* defined(BCM_TRIUMPH3_SUPPORT) */
+         }
+ 
++#if defined(BCM_TOMAHAWK_SUPPORT)
++        if (SOC_IS_TOMAHAWK(unit) || SOC_IS_TOMAHAWK2(unit)) {
++            /* Recover port vlan action profile */
++            rv = _bcm_th_port_vlan_action_profile_reinit(unit);
++            if (BCM_FAILURE(rv)) {
++                return rv;
++            }
++        }
++#endif
++
+         /* Recover DT mode */
+         rv = _bcm_trx_port_dtag_mode_reinit(unit, dtm_pbmp, use_pbmp);
+         if (BCM_FAILURE(rv)) {
+diff --git a/src/bcm/esw/trx/vlan.c b/src/bcm/esw/trx/vlan.c
+index 39171b42a46..f8160d6ac07 100755
+--- a/src/bcm/esw/trx/vlan.c    2018-09-20 14:53:37.000000000 -0400
++++ b/src/bcm/esw/trx/vlan.c	2018-09-20 15:53:20.389423000 -0400
+@@ -1371,17 +1371,33 @@ _bcm_trx_vlan_action_profile_init(int un
+                                                     idx - entry_idxmin[0], 1);
+                 }
+     
+-            /* Increment the ref count for all Protocol-based VLANs */
+-            for (i = 0; i < soc_mem_index_count(unit, VLAN_PROTOCOL_DATAm); i++) {
+-                SOC_IF_ERROR_RETURN
+-                    (READ_VLAN_PROTOCOL_DATAm(unit, MEM_BLOCK_ANY, i, &proto_entry));
+-                idx = soc_mem_field32_get(unit, VLAN_PROTOCOL_DATAm,
+-                                          &proto_entry, TAG_ACTION_PROFILE_PTRf);
+-                SOC_IF_ERROR_RETURN(
+-                    soc_profile_mem_reference(unit, ing_action_profile[unit],
+-                    idx, 1));
+-                SOC_PROFILE_MEM_ENTRIES_PER_SET(unit, ing_action_profile[unit],
+-                                                idx - entry_idxmin[0], 1);
++            /* TH/TH2 and some other chips need use another method to revocer
++             * the reference count in _bcm_th_port_vlan_action_profile_reinit().
++             */
++           if (!SOC_IS_TOMAHAWK(unit) && !SOC_IS_TOMAHAWK2(unit)) {
++                /* Increment the ref count for all Protocol-based VLANs */
++               for (i = 0; i < soc_mem_index_count(unit, VLAN_PROTOCOL_DATAm);
++                     i++) {
++                    SOC_IF_ERROR_RETURN(
++                                        READ_VLAN_PROTOCOL_DATAm(unit, MEM_BLOCK_ANY, i,
++                                                                 &proto_entry));
++                    idx = soc_mem_field32_get(unit, VLAN_PROTOCOL_DATAm,
++                                              &proto_entry,
++                                              TAG_ACTION_PROFILE_PTRf);
++                    if (idx >= entry_idxmin[0]) {
++                        SOC_IF_ERROR_RETURN(
++                                            soc_profile_mem_reference(unit,
++                                                                      ing_action_profile[unit], idx, 1));
++                        SOC_PROFILE_MEM_ENTRIES_PER_SET(
++                                                        unit, ing_action_profile[unit],
++                                                        idx - entry_idxmin[0], 1);
++                    } else {
++                        SOC_IF_ERROR_RETURN(
++                                            soc_profile_mem_reference(unit,
++                                                                      ing_action_profile[unit],
++                                                                      ing_action_profile_def[unit], 1));
++                    }
++                }
+             }
+     
+             /* Increment the ref count for all Subnet-based VLANs */
+@@ -1786,6 +1802,78 @@ _bcm_trx_vlan_action_profile_init(int un
+     return BCM_E_NONE;
+ }
+ 
++
++ 
++ #if defined(BCM_TOMAHAWK_SUPPORT)
++/*
++ * Function : _bcm_th_port_vlan_action_profile_reinit
++ *
++ * Purpose  :
++ *      Recover 'vlan_prot_ptr' in port_info structure.
++ *      Recover reference count of ING_VLAN_TAG_ACTION_PROFILE
++ *      for all Protocol-based VLANs.
++ *
++ * Note:
++ *      'vlan_prot_ptr' in port_info structure was recovered
++ *      from scache for TH2.
++ *
++ */
++int
++_bcm_th_port_vlan_action_profile_reinit(int unit)
++{
++    int rv = BCM_E_NONE;
++    int i, idx;
++    int vlan_prot_entries;
++    bcm_port_t port;
++    uint32 vlan_protocol_data_index = 0;
++    _bcm_port_info_t *pinfo;
++    bcm_pbmp_t all_pbmp;
++    uint32 action_profile_idx;
++    vlan_protocol_data_entry_t vde;
++
++    BCM_PBMP_CLEAR(all_pbmp);
++    BCM_PBMP_ASSIGN(all_pbmp, PBMP_ALL(unit));
++
++    vlan_prot_entries = soc_mem_index_count(unit, VLAN_PROTOCOLm);
++    PBMP_ITER(all_pbmp, port) {
++        if (!IS_LB_PORT(unit, port)) {
++            /* update vlan port protocol data memory */
++            BCM_IF_ERROR_RETURN(_bcm_port_info_get(unit, port, &pinfo));
++
++            /* TH2 has already recovered it from scache */
++            if (!SOC_IS_TOMAHAWK2(unit)) {
++                /* Get VLAN_PROTOCOL_DATA_INDEXf  in PORT_TAB. */
++                SOC_IF_ERROR_RETURN(_bcm_esw_port_tab_get(unit, port,
++                                    VLAN_PROTOCOL_DATA_INDEXf, &idx));
++                vlan_protocol_data_index = idx * vlan_prot_entries;
++                pinfo->vlan_prot_ptr = vlan_protocol_data_index;
++
++                BCM_IF_ERROR_RETURN(
++                        _bcm_port_vlan_protocol_data_entry_reference (unit,
++                            vlan_protocol_data_index, 16));
++            }
++
++            for (i = 0; i < vlan_prot_entries; i++) {
++                rv = READ_VLAN_PROTOCOL_DATAm(unit, MEM_BLOCK_ANY,
++                                              pinfo->vlan_prot_ptr + i, &vde);
++                if (BCM_FAILURE(rv)) {
++                    return (rv);
++                }
++                action_profile_idx = soc_VLAN_PROTOCOL_DATAm_field32_get(unit,
++                                     &vde, TAG_ACTION_PROFILE_PTRf);
++                SOC_IF_ERROR_RETURN(
++                    soc_profile_mem_reference(unit, ing_action_profile[unit],
++                    action_profile_idx, 1));
++                SOC_PROFILE_MEM_ENTRIES_PER_SET(unit, ing_action_profile[unit],
++                    action_profile_idx, 1);
++            }
++        }
++    }
++
++    return (rv);
++}
++#endif
++
+ /*
+  * Function : _bcm_trx_vlan_action_profile_entry_add
+  *
+
+--- a/src/appl/diag/ledproc.c      2018-11-27 13:08:06.886860000 -0500
++++ b/src/appl/diag/ledproc.c      2018-11-27 14:10:19.959704000 -0500
+@@ -279,7 +279,7 @@ ledproc_load_args(int unit, args_t *a, l
+  *      In each byte, bit 0 is used for link status.
+  *      In each byte, bit 7 is used for turbo mode indication.
+  */
+-STATIC void
++void
+ ledproc_linkscan_cb(int unit, soc_port_t port, bcm_port_info_t *info)
+ {
+     uint32     portdata = 0;
+
+--- a/src/soc/esw/drv.c	    2019-01-08 13:15:51.264549000 -0500
++++ b/src/soc/esw/drv.c	    2019-01-08 14:36:42.227012000 -0500
+@@ -1445,10 +1445,6 @@ soc_info_config(int unit, soc_control_t 
+     si->sflow_range_max = 24;
+     si->nat_id_max = 2048;
+     si->fp_hg_port_offset = -1;
+-#ifdef BCM_SBUSDMA_SUPPORT
+-        soc->max_sbusdma_channels = 0;
+-#endif
+-
+     si->max_mtu = 16360;
+ 
+     SOC_PBMP_CLEAR(pbmp_xport_xe);
+
+--- a/src/bcm/esw/tomahawk/field_grp.c	2019-03-15 15:11:36.750259027 -0400
++++ b/src/bcm/esw/tomahawk/field_grp.c	2019-03-15 15:16:02.972676146 -0400
+@@ -11874,8 +11874,6 @@ _bcm_field_th_group_add_mode_validate(in
+                                       _field_group_t *fg) {
+     _field_group_t *curr_group;
+ 	_field_control_t  *fc;
+-	bcm_field_group_mode_t mode1 = 0;
+-    bcm_field_group_mode_t mode2 = 0;
+ 	if (fg == NULL) {
+         return BCM_E_PARAM;
+     }
+@@ -11893,11 +11891,23 @@ _bcm_field_th_group_add_mode_validate(in
+             (curr_group->stage_id != _BCM_FIELD_STAGE_FLOWTRACKER) &&
+             (curr_group->instance == fg->instance) &&
+             (curr_group->priority == fg->priority)) {
+-           _bcm_esw_field_group_mode_get(curr_group->flags, &mode1);
+-		   _bcm_esw_field_group_mode_get(fg->flags, &mode2);
+-           if( (mode1 != mode2) &&
+-               (curr_group->priority != BCM_FIELD_GROUP_PRIO_ANY)) {
+-               return BCM_E_PARAM;
++            /*
++             * Default group and Presel group can't have same priority.
++             */
++            if ((fg->flags & _FP_GROUP_PRESELECTOR_SUPPORT) !=
++                (curr_group->flags & _FP_GROUP_PRESELECTOR_SUPPORT)) {
++                 LOG_ERROR(BSL_LS_BCM_FP, (BSL_META_U(unit,
++                    "Error: Same priority is not possible between default group and"
++                    " presel group.\n\r")));
++                 return BCM_E_PARAM;
++            }
++
++            if (fg->flags & _FP_GROUP_PRESELECTOR_SUPPORT) {
++                /* Return Error if modes are different */
++                if ((fg->flags & _FP_GROUP_SPAN_MASK) !=
++                    (curr_group->flags & _FP_GROUP_SPAN_MASK)) {
++                    return BCM_E_PARAM;
++                }
+            }
+         }
+         curr_group = curr_group->next;
+
+--- a/src/soc/esw/tomahawk.c
++++ b/src/soc/esw/tomahawk.c
+@@ -6892,11 +6892,11 @@ soc_th_port_config_validate(int unit)
+ {
+     int encap, ovs, lport, blk;
+     int port_sister_speed[4] = {-1, -1, -1, -1};
+-    int port_status[4] = {-1, -1, -1, -1};
++    int port_status[4] = {0};
+     int port_base, port_base_speed = 0;
+     soc_info_t *si = &SOC_INFO(unit);
+     int mixed_25_50_en = 0;
+-    int i = 0;
++    int i = 0, idx = 0;
+
+     ovs = si->oversub_mode;
+     mixed_25_50_en = si->os_mixed_sister_25_50_enable;
+@@ -6909,6 +6909,10 @@ soc_th_port_config_validate(int unit)
+         if (SOC_BLOCK_TYPE(unit, blk) == SOC_BLK_CLPORT) {
+             encap = SOC_ENCAP_COUNT;
+             i = 0;
++            for (idx = 0; idx < 4; idx++) {
++                port_sister_speed[idx] = -1;
++                port_status[idx] = 0;
++            }
+
+             SOC_PBMP_ITER(si->block_bitmap[blk], lport) {
+                 if (encap == SOC_ENCAP_COUNT) {
+
+
