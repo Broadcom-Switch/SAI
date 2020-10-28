@@ -1,6 +1,6 @@
 SAI
 ===
-Broadcom SAI spec implementation software version 3.7
+Broadcom SAI spec implementation software version 4.2
 
 Overview
 ========
