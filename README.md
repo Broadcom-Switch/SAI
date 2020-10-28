@@ -8,7 +8,7 @@ SAI is a OCP project in the networking projects sub category.
 SAI provides a vendor-independent way of controlling the switching and
 forwarding elements like ASICs, NPUs etc. in a generic way.
 This software release is Broadcom's contribution to the open community of its
-implementation of the SAI spec 1.5.2 specified on the SAI Github at
+implementation of the SAI spec 1.6.5 specified on the SAI Github at
 https://github.com/opencomputeproject/SAI.
 This implementation enables any customer to be able to configure and control
 the Broadcom switching ASICs as described by the SAI standard.
@@ -39,4 +39,4 @@ GCC 6.3.0
 
 SAI Version
 ===========
-1.5.2
+1.6.5
